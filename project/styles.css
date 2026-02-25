@@ -4,6 +4,7 @@
   --land:#2b2d42;
   --stroke:#f7f3ea;
   --hover:#ef8354;
+  --no-data:#b7bcc8;
 }
 
 body{
@@ -59,9 +60,65 @@ p{ margin:0; opacity:.75; }
 .leaflet-tooltip.state-tooltip{
   background: rgba(255,255,255,0.95);
   border: 1px solid #ddd;
-  padding: 6px 8px;
+  padding: 8px 10px;
   border-radius: 6px;
   font-size: 12px;
+  line-height: 1.35;
   box-shadow: 0 6px 16px rgba(0,0,0,0.12);
   color: #111;
+}
+
+.leaflet-tooltip.state-tooltip .tooltip-title{
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.map-legend,
+.map-pill{
+  background: rgba(255,255,255,0.94);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.10);
+  color: #171717;
+}
+
+.map-legend{
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.25;
+  min-width: 178px;
+}
+
+.legend-title{
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.legend-row{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+  white-space: nowrap;
+}
+
+.swatch{
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(0,0,0,0.15);
+  display: inline-block;
+  flex: 0 0 14px;
+}
+
+.legend-note{
+  margin-top: 8px;
+  opacity: 0.75;
+  font-size: 11px;
+}
+
+.map-pill{
+  padding: 8px 10px;
+  font-size: 12px;
+  margin-top: 10px;
 }

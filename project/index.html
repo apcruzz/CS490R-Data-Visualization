@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>US States (Leaflet w/ AK & HI Insets)</title>
+  <title>2024 Overseas Visitors by State</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="styles.css" />
@@ -11,8 +11,8 @@
 
 <body>
   <header>
-    <h1>US States</h1>
-    <p>Leaflet + GeoJSON (Lower 48 + Alaska/Hawaii insets)</p>
+    <h1>2024 Overseas Visitors by State</h1>
+    <p>Leaflet choropleth using NTTO state visitation totals (2024, thousands of visitors)</p>
   </header>
 
   <div class="map-wrap">
@@ -25,40 +25,132 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="state-visit-data.js"></script>
 
   <script>
-    // ---- Styles (match your D3 colors) ----
-    function baseStyle(){
+    const STATE_DATA = window.STATE_VISIT_DATA || {};
+    const VALUE_FIELD = "visitation2024k"; // values are in thousands (000)
+    const colorBreaks = [50, 100, 250, 500, 1000, 2000, 4000, 8000];
+
+    function cssVar(name) {
       const css = getComputedStyle(document.documentElement);
+      return css.getPropertyValue(name).trim();
+    }
+
+    function getStateName(feature) {
+      return feature?.properties?.name || feature?.id || "State";
+    }
+
+    function getStateMetric(feature) {
+      return STATE_DATA[getStateName(feature)] || null;
+    }
+
+    function getFillColor(metric) {
+      if (!metric || typeof metric[VALUE_FIELD] !== "number") return cssVar("--no-data");
+      const v = metric[VALUE_FIELD];
+      if (v > colorBreaks[7]) return "#6e1711";
+      if (v > colorBreaks[6]) return "#9b2219";
+      if (v > colorBreaks[5]) return "#c33a1f";
+      if (v > colorBreaks[4]) return "#e05a2a";
+      if (v > colorBreaks[3]) return "#ef8354";
+      if (v > colorBreaks[2]) return "#f4a261";
+      if (v > colorBreaks[1]) return "#f8bf85";
+      if (v > colorBreaks[0]) return "#fbd7ac";
+      return "#fee9cf";
+    }
+
+    function baseStyle(feature){
+      const metric = getStateMetric(feature);
       return {
-        color: css.getPropertyValue("--stroke").trim(),
+        color: cssVar("--stroke"),
         weight: 1,
-        fillColor: css.getPropertyValue("--land").trim(),
+        fillColor: getFillColor(metric),
         fillOpacity: 0.95
       };
     }
 
     function hoverStyle(){
-      const css = getComputedStyle(document.documentElement);
       return {
         color: "#ffffff",
         weight: 2,
-        fillColor: css.getPropertyValue("--hover").trim(),
+        fillColor: cssVar("--hover"),
         fillOpacity: 1
       };
     }
 
-    function attachInteractions(feature, layer){
-      const name = feature?.properties?.name || feature?.id || "State";
+    function formatThousands(value) {
+      return typeof value === "number" ? `${value.toLocaleString()}k` : "No data";
+    }
 
-      layer.bindTooltip(name, {
+    function formatPercent(value) {
+      return typeof value === "number" ? `${(value * 100).toFixed(1)}%` : "No data";
+    }
+
+    function attachInteractions(feature, layer){
+      const name = getStateName(feature);
+      const metric = getStateMetric(feature);
+      const tooltipHtml = `
+        <div class="tooltip-title">${name}</div>
+        <div>${metric ? `Rank: ${metric.rank}` : "Rank: No data"}</div>
+        <div>2024 visitation: ${formatThousands(metric?.visitation2024k)}</div>
+        <div>2023 visitation: ${formatThousands(metric?.visitation2023k)}</div>
+        <div>YoY change: ${formatPercent(metric?.pctChange)}</div>
+        <div>2024 market share: ${formatPercent(metric?.marketShare2024)}</div>
+      `;
+
+      layer.bindTooltip(tooltipHtml, {
         sticky: true,
         direction: "auto",
         className: "state-tooltip"
       });
 
       layer.on("mouseover", () => layer.setStyle(hoverStyle()));
-      layer.on("mouseout", () => layer.setStyle(baseStyle()));
+      layer.on("mouseout", () => layer.setStyle(baseStyle(feature)));
+    }
+
+    function addLegend(map) {
+      const legend = L.control({ position: "bottomleft" });
+      legend.onAdd = function() {
+        const div = L.DomUtil.create("div", "map-legend");
+        const labels = [];
+        let from = 0;
+
+        for (const to of colorBreaks) {
+          labels.push(
+            `<div class="legend-row"><span class="swatch" style="background:${getFillColor({ [VALUE_FIELD]: to - 1 })}"></span>${from.toLocaleString()}-${to.toLocaleString()}k</div>`
+          );
+          from = to;
+        }
+        labels.push(
+          `<div class="legend-row"><span class="swatch" style="background:${getFillColor({ [VALUE_FIELD]: colorBreaks[colorBreaks.length - 1] + 1 })}"></span>${colorBreaks[colorBreaks.length - 1].toLocaleString()}k+</div>`
+        );
+        labels.push(
+          `<div class="legend-row"><span class="swatch" style="background:${cssVar("--no-data")}"></span>No data</div>`
+        );
+
+        div.innerHTML = `
+          <div class="legend-title">2024 visitation (000)</div>
+          ${labels.join("")}
+          <div class="legend-note">Source: NTTO / SIAT (workbook provided)</div>
+        `;
+        return div;
+      };
+      legend.addTo(map);
+    }
+
+    function addSummaryPill(map, geojson) {
+      const total = geojson.features.reduce((sum, f) => {
+        const v = getStateMetric(f)?.[VALUE_FIELD];
+        return sum + (typeof v === "number" ? v : 0);
+      }, 0);
+      const count = geojson.features.filter(f => typeof getStateMetric(f)?.[VALUE_FIELD] === "number").length;
+      const pill = L.control({ position: "topright" });
+      pill.onAdd = function() {
+        const div = L.DomUtil.create("div", "map-pill");
+        div.innerHTML = `<strong>${count}</strong> map regions with data • <strong>${total.toLocaleString()}k</strong> total visitors`;
+        return div;
+      };
+      pill.addTo(map);
     }
 
     // ---- Create 3 maps: main + 2 insets ----
@@ -105,8 +197,6 @@
 
         const isAK = f => (f?.properties?.name === "Alaska" || f?.id === "02");
         const isHI = f => (f?.properties?.name === "Hawaii" || f?.id === "15");
-        const isDC = f => (f?.properties?.name === "District of Columbia" || f?.id === "11");
-
         // Lower 48 = everything except Alaska & Hawaii (keep DC if you want)
         const lower48 = {
           type: "FeatureCollection",
@@ -130,6 +220,8 @@
         }).addTo(mainMap);
 
         mainMap.fitBounds(lowerLayer.getBounds(), { padding: [20, 20] });
+        addLegend(mainMap);
+        addSummaryPill(mainMap, data);
 
         // --- Alaska inset ---
         const akLayer = L.geoJSON(alaska, {
