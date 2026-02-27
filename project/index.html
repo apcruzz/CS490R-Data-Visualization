@@ -24,6 +24,28 @@
     </div>
   </div>
 
+  <button id="quiz-open-btn" class="quiz-fab" type="button" aria-expanded="false" aria-controls="quiz-panel">
+    State Match Quiz
+  </button>
+
+  <div class="avatar-controls" aria-label="Avatar controls">
+    <button id="avatar-toggle-btn" class="avatar-btn" type="button">Hide Avatars</button>
+    <button id="avatar-clear-btn" class="avatar-btn danger" type="button">Clear Avatars</button>
+  </div>
+
+  <section id="quiz-panel" class="quiz-panel" aria-label="State recommendation quiz">
+    <div class="quiz-panel-header">
+      <h2>Find Your State Match</h2>
+      <button id="quiz-close-btn" type="button" class="quiz-close-btn" aria-label="Close quiz">X</button>
+    </div>
+    <div id="quiz-body" class="quiz-body"></div>
+    <div class="quiz-controls">
+      <button id="quiz-back-btn" type="button" class="quiz-nav-btn">Back</button>
+      <button id="quiz-next-btn" type="button" class="quiz-nav-btn primary">Next</button>
+    </div>
+  </section>
+
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="state-visit-data.js"></script>
 
@@ -153,6 +175,133 @@
       pill.addTo(map);
     }
 
+    const stateCenters = {};
+    const avatarMarkers = [];
+    let avatarsVisible = true;
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[ch]));
+    }
+
+    function getInitials(name) {
+      const initials = String(name || "Traveler")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0].toUpperCase())
+        .join("");
+      return initials || "T";
+    }
+
+    function cacheStateCenters(layer, mapKey) {
+      layer.eachLayer((stateLayer) => {
+        const name = getStateName(stateLayer.feature);
+        const bounds = stateLayer.getBounds?.();
+        if (bounds && bounds.isValid()) {
+          stateCenters[name] = { mapKey, center: bounds.getCenter() };
+        }
+      });
+    }
+
+    function getMapByKey(mapKey) {
+      if (mapKey === "ak") return akMap;
+      if (mapKey === "hi") return hiMap;
+      return mainMap;
+    }
+
+    function updateAvatarButtons() {
+      const toggleBtn = document.getElementById("avatar-toggle-btn");
+      if (!toggleBtn) return;
+      toggleBtn.textContent = avatarsVisible ? "Hide Avatars" : "Show Avatars";
+    }
+
+    function clearAllAvatars() {
+      avatarMarkers.forEach((item) => {
+        const map = getMapByKey(item.mapKey);
+        if (map.hasLayer(item.marker)) {
+          map.removeLayer(item.marker);
+        }
+      });
+      avatarMarkers.length = 0;
+    }
+
+    function setAvatarVisibility(visible) {
+      avatarsVisible = visible;
+      avatarMarkers.forEach((item) => {
+        const map = getMapByKey(item.mapKey);
+        if (visible) {
+          if (!map.hasLayer(item.marker)) {
+            item.marker.addTo(map);
+          }
+        } else if (map.hasLayer(item.marker)) {
+          map.removeLayer(item.marker);
+        }
+      });
+      updateAvatarButtons();
+    }
+
+    function setupAvatarControls() {
+      const toggleBtn = document.getElementById("avatar-toggle-btn");
+      const clearBtn = document.getElementById("avatar-clear-btn");
+      if (!toggleBtn || !clearBtn) return;
+
+      toggleBtn.addEventListener("click", () => {
+        setAvatarVisibility(!avatarsVisible);
+      });
+
+      clearBtn.addEventListener("click", () => {
+        clearAllAvatars();
+      });
+
+      updateAvatarButtons();
+    }
+
+    function renderStateAvatar(personName, stateName) {
+      const target = stateCenters[stateName];
+      if (!target) return false;
+
+      const map = getMapByKey(target.mapKey);
+      const safeName = escapeHtml(personName || "Traveler");
+      const initials = getInitials(personName);
+
+      const icon = L.divIcon({
+        className: "state-avatar-wrap",
+        html: `
+          <div class="state-avatar-person" aria-hidden="true">
+            <div class="person-head"></div>
+            <div class="person-body"></div>
+            <div class="person-legs"></div>
+            <div class="person-label">${escapeHtml(initials)}</div>
+          </div>
+        `,
+        iconSize: [56, 72],
+        iconAnchor: [28, 64]
+      });
+
+      const marker = L.marker(target.center, { icon, keyboard: false });
+      if (avatarsVisible) {
+        marker.addTo(map);
+      }
+      marker.bindTooltip(`${safeName} matched with ${escapeHtml(stateName)}`, {
+        direction: "top",
+        offset: [0, -14],
+        className: "state-tooltip"
+      });
+      avatarMarkers.push({ marker, mapKey: target.mapKey });
+      return true;
+    }
+
+    window.renderStateAvatar = renderStateAvatar;
+    window.clearAllAvatars = clearAllAvatars;
+    window.setAvatarVisibility = setAvatarVisibility;
+
     // ---- Create 3 maps: main + 2 insets ----
     const mainMap = L.map("map", {
       zoomControl: false,
@@ -189,6 +338,7 @@
     // Optional: stop clicks on inset from panning main map (extra safe)
     L.DomEvent.disableClickPropagation(document.getElementById("map-ak"));
     L.DomEvent.disableClickPropagation(document.getElementById("map-hi"));
+    setupAvatarControls();
 
     // ---- Load GeoJSON once, split into layers ----
     fetch("us-states.json") // <-- your file name
@@ -218,8 +368,9 @@
           style: baseStyle,
           onEachFeature: attachInteractions
         }).addTo(mainMap);
+        cacheStateCenters(lowerLayer, "main");
 
-        mainMap.fitBounds(lowerLayer.getBounds(), { padding: [20, 20] });
+        mainMap.fitBounds(lowerLayer.getBounds(), { padding: [40, 40] });
         addLegend(mainMap);
         addSummaryPill(mainMap, data);
 
@@ -228,6 +379,7 @@
           style: baseStyle,
           onEachFeature: attachInteractions
         }).addTo(akMap);
+        cacheStateCenters(akLayer, "ak");
 
         if (akLayer.getBounds().isValid()) {
           akMap.fitBounds(akLayer.getBounds(), { padding: [10, 10] });
@@ -238,6 +390,7 @@
           style: baseStyle,
           onEachFeature: attachInteractions
         }).addTo(hiMap);
+        cacheStateCenters(hiLayer, "hi");
 
         if (hiLayer.getBounds().isValid()) {
           hiMap.fitBounds(hiLayer.getBounds(), { padding: [10, 10] });
@@ -245,10 +398,11 @@
 
         // ---- "Zoom it in" a bit like D3's framing ----
         // After fitting, zoom in one level for a tighter look:
-        mainMap.setZoom(mainMap.getZoom() + 1);
+        mainMap.setZoom(mainMap.getZoom() + .5);
 
       })
       .catch(err => console.error("Failed to load us-states.json:", err));
   </script>
+  <script src="state-recommender-game.js"></script>
 </body>
 </html>

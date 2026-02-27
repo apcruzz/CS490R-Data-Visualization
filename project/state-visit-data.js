@@ -144,6 +144,14 @@ window.STATE_VISIT_DATA = {
     "marketShare2023": 0.0145,
     "pctChange": 0.118421
   },
+  "North Dakota": {
+    "rank": 41,
+    "visitation2024k": 71,
+    "visitation2023k": 64,
+    "marketShare2024": 0.002,
+    "marketShare2023": 0.0018,
+    "pctChange": 0.109375
+  },
   "Colorado": {
     "rank": 19,
     "visitation2024k": 461,
@@ -231,6 +239,14 @@ window.STATE_VISIT_DATA = {
     "marketShare2024": 0.0058,
     "marketShare2023": 0.0041,
     "pctChange": 0.581395
+  },
+  "West Virginia": {
+    "rank": 39,
+    "visitation2024k": 88,
+    "visitation2023k": 73,
+    "marketShare2024": 0.0025,
+    "marketShare2023": 0.0021,
+    "pctChange": 0.205479
   },
   "Wisconsin": {
     "rank": 30,
