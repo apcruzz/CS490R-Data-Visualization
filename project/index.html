@@ -11,42 +11,67 @@
 
 <body>
   <header>
-    <h1>2024 Overseas Visitors by State</h1>
-    <p>Leaflet choropleth using NTTO state visitation totals (2024, thousands of visitors)</p>
+    <div class="header-copy">
+      <h1>2024 Overseas Visitors by State</h1>
+      <p>Leaflet choropleth using NTTO state visitation totals (2024, thousands of visitors)</p>
+    </div>
+    <nav class="view-tabs" aria-label="Visualization views">
+      <button type="button" class="view-tab is-active" data-tab-target="tab-map">Map</button>
+      <button type="button" class="view-tab" data-tab-target="tab-charts">Charts</button>
+    </nav>
   </header>
 
-  <div class="map-wrap">
-    <div id="map"></div>
+  <section id="tab-map" class="tab-panel is-active">
+    <div class="map-wrap">
+      <div id="map"></div>
 
-    <div class="inset">
-      <div id="map-ak" class="inset-map" title="Alaska"></div>
-      <div id="map-hi" class="inset-map" title="Hawaii"></div>
+      <div class="inset">
+        <div id="map-ak" class="inset-map" title="Alaska"></div>
+        <div id="map-hi" class="inset-map" title="Hawaii"></div>
+      </div>
     </div>
-  </div>
 
-  <button id="quiz-open-btn" class="quiz-fab" type="button" aria-expanded="false" aria-controls="quiz-panel">
-    State Match Quiz
-  </button>
+    <button id="quiz-open-btn" class="quiz-fab" type="button" aria-expanded="false" aria-controls="quiz-panel">
+      State Match Quiz
+    </button>
 
-  <div class="avatar-controls" aria-label="Avatar controls">
-    <button id="avatar-toggle-btn" class="avatar-btn" type="button">Hide Avatars</button>
-    <button id="avatar-clear-btn" class="avatar-btn danger" type="button">Clear Avatars</button>
-  </div>
-
-  <section id="quiz-panel" class="quiz-panel" aria-label="State recommendation quiz">
-    <div class="quiz-panel-header">
-      <h2>Find Your State Match</h2>
-      <button id="quiz-close-btn" type="button" class="quiz-close-btn" aria-label="Close quiz">X</button>
+    <div class="avatar-controls" aria-label="Avatar controls">
+      <button id="avatar-toggle-btn" class="avatar-btn" type="button">Hide Avatars</button>
+      <button id="avatar-clear-btn" class="avatar-btn danger" type="button">Clear Avatars</button>
     </div>
-    <div id="quiz-body" class="quiz-body"></div>
-    <div class="quiz-controls">
-      <button id="quiz-back-btn" type="button" class="quiz-nav-btn">Back</button>
-      <button id="quiz-next-btn" type="button" class="quiz-nav-btn primary">Next</button>
+
+    <section id="quiz-panel" class="quiz-panel" aria-label="State recommendation quiz">
+      <div class="quiz-panel-header">
+        <h2>Find Your State Match</h2>
+        <button id="quiz-close-btn" type="button" class="quiz-close-btn" aria-label="Close quiz">X</button>
+      </div>
+      <div id="quiz-body" class="quiz-body"></div>
+      <div class="quiz-controls">
+        <button id="quiz-back-btn" type="button" class="quiz-nav-btn">Back</button>
+        <button id="quiz-next-btn" type="button" class="quiz-nav-btn primary">Next</button>
+      </div>
+    </section>
+  </section>
+
+  <section id="tab-charts" class="tab-panel">
+    <div class="charts-wrap">
+      <div class="chart-card chart-wide">
+        <h3>Top States by 2024 Visitation</h3>
+        <canvas id="bar-chart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>2024 Share (Top States + Other)</h3>
+        <canvas id="pie-chart"></canvas>
+      </div>
+      <div class="chart-card chart-wide">
+        <h3>2023 vs 2024 by State</h3>
+        <canvas id="line-chart"></canvas>
+      </div>
     </div>
   </section>
 
-
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="state-visit-data.js"></script>
 
   <script>
@@ -403,5 +428,6 @@
       .catch(err => console.error("Failed to load us-states.json:", err));
   </script>
   <script src="state-recommender-game.js"></script>
+  <script src="visualization-tabs.js"></script>
 </body>
 </html>
