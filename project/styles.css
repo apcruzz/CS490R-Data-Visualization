@@ -337,58 +337,24 @@ p{ margin:0; opacity:.75; }
 }
 
 .state-avatar-person{
-  width: 56px;
-  height: 72px;
+  width: 64px;
+  height: 86px;
   position: relative;
   display: grid;
   justify-items: center;
 }
 
-.person-head{
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  background: #ffd6a5;
-  border: 2px solid #1b1b1b;
-  z-index: 3;
-}
-
-.person-body{
-  width: 26px;
-  height: 28px;
-  margin-top: 2px;
-  border-radius: 10px;
-  background: #1f4f66;
-  border: 2px solid #1b1b1b;
-  position: relative;
-  z-index: 2;
-}
-
-.person-body::before,
-.person-body::after{
-  content: "";
-  position: absolute;
-  top: 4px;
-  width: 7px;
-  height: 18px;
-  background: #ffd6a5;
-  border: 2px solid #1b1b1b;
-  border-radius: 8px;
-}
-
-.person-body::before{ left: -8px; }
-.person-body::after{ right: -8px; }
-
-.person-legs{
-  width: 20px;
-  height: 16px;
-  margin-top: 2px;
-  border-left: 4px solid #1b1b1b;
-  border-right: 4px solid #1b1b1b;
+.state-avatar-image{
+  width: 56px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
 }
 
 .person-label{
-  margin-top: 4px;
+  margin-top: 5px;
   padding: 2px 6px;
   border-radius: 999px;
   background: #fff;

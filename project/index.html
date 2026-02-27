@@ -53,6 +53,7 @@
     const STATE_DATA = window.STATE_VISIT_DATA || {};
     const VALUE_FIELD = "visitation2024k"; // values are in thousands (000)
     const colorBreaks = [50, 100, 250, 500, 1000, 2000, 4000, 8000];
+    const AVATAR_IMAGE_SRC = "avatar.png";
 
     function cssVar(name) {
       const css = getComputedStyle(document.documentElement);
@@ -275,14 +276,12 @@
         className: "state-avatar-wrap",
         html: `
           <div class="state-avatar-person" aria-hidden="true">
-            <div class="person-head"></div>
-            <div class="person-body"></div>
-            <div class="person-legs"></div>
+            <img class="state-avatar-image" src="${AVATAR_IMAGE_SRC}" alt="Avatar" />
             <div class="person-label">${escapeHtml(initials)}</div>
           </div>
         `,
-        iconSize: [56, 72],
-        iconAnchor: [28, 64]
+        iconSize: [64, 86],
+        iconAnchor: [32, 78]
       });
 
       const marker = L.marker(target.center, { icon, keyboard: false });
