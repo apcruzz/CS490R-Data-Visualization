@@ -79,6 +79,8 @@
     const VALUE_FIELD = "visitation2024k"; // values are in thousands (000)
     const colorBreaks = [50, 100, 250, 500, 1000, 2000, 4000, 8000];
     const AVATAR_IMAGE_SRC = "avatar.png";
+    const AVATAR_STORAGE_KEY = "state-avatar-history-v1";
+    const AVATAR_SLOT_SPACING = 18;
 
     function cssVar(name) {
       const css = getComputedStyle(document.documentElement);
@@ -259,6 +261,36 @@
       return mainMap;
     }
 
+    function saveAvatarsToStorage() {
+      try {
+        const payload = avatarMarkers.map((item) => ({
+          personName: item.personName,
+          stateName: item.stateName
+        }));
+        localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(payload));
+      } catch (_) {}
+    }
+
+    function readAvatarsFromStorage() {
+      try {
+        const raw = localStorage.getItem(AVATAR_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter((item) => item && item.personName && item.stateName);
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function getAvatarOffsetForState(stateName) {
+      const idx = avatarMarkers.filter((item) => item.stateName === stateName).length;
+      if (idx === 0) return 0;
+      const step = Math.ceil(idx / 2);
+      const dir = idx % 2 === 1 ? -1 : 1;
+      return dir * step * AVATAR_SLOT_SPACING;
+    }
+
     function updateAvatarButtons() {
       const toggleBtn = document.getElementById("avatar-toggle-btn");
       if (!toggleBtn) return;
@@ -273,6 +305,9 @@
         }
       });
       avatarMarkers.length = 0;
+      try {
+        localStorage.removeItem(AVATAR_STORAGE_KEY);
+      } catch (_) {}
     }
 
     function setAvatarVisibility(visible) {
@@ -306,24 +341,27 @@
       updateAvatarButtons();
     }
 
-    function renderStateAvatar(personName, stateName) {
+    function renderStateAvatar(personName, stateName, options = {}) {
       const target = stateCenters[stateName];
       if (!target) return false;
 
       const map = getMapByKey(target.mapKey);
       const safeName = escapeHtml(personName || "Traveler");
       const initials = getInitials(personName);
+      const xOffset = getAvatarOffsetForState(stateName);
 
       const icon = L.divIcon({
         className: "state-avatar-wrap",
         html: `
-          <div class="state-avatar-person" aria-hidden="true">
-            <img class="state-avatar-image" src="${AVATAR_IMAGE_SRC}" alt="Avatar" />
-            <div class="person-label">${escapeHtml(initials)}</div>
+          <div class="state-avatar-slot" style="transform: translateX(${xOffset}px);" aria-hidden="true">
+            <div class="state-avatar-person">
+              <img class="state-avatar-image" src="${AVATAR_IMAGE_SRC}" alt="Avatar" />
+              <div class="person-label">${escapeHtml(initials)}</div>
+            </div>
           </div>
         `,
-        iconSize: [64, 86],
-        iconAnchor: [32, 78]
+        iconSize: [220, 86],
+        iconAnchor: [110, 78]
       });
 
       const marker = L.marker(target.center, { icon, keyboard: false });
@@ -335,8 +373,18 @@
         offset: [0, -14],
         className: "state-tooltip"
       });
-      avatarMarkers.push({ marker, mapKey: target.mapKey });
+      avatarMarkers.push({ marker, mapKey: target.mapKey, personName: safeName, stateName });
+      if (options.persist !== false) {
+        saveAvatarsToStorage();
+      }
       return true;
+    }
+
+    function restoreAvatarsFromStorage() {
+      const saved = readAvatarsFromStorage();
+      saved.forEach((entry) => {
+        renderStateAvatar(entry.personName, entry.stateName, { persist: false });
+      });
     }
 
     window.renderStateAvatar = renderStateAvatar;
@@ -443,6 +491,7 @@
         // ---- "Zoom it in" a bit like D3's framing ----
         // After fitting, zoom in one level for a tighter look:
         mainMap.setZoom(mainMap.getZoom() + .5);
+        restoreAvatarsFromStorage();
 
       })
       .catch(err => console.error("Failed to load us-states.json:", err));

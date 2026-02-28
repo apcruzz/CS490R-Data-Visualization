@@ -421,6 +421,11 @@ p{ margin:0; opacity:.75; }
   border: 0;
 }
 
+.state-avatar-slot{
+  width: 64px;
+  margin: 0 auto;
+}
+
 .state-avatar-person{
   width: 64px;
   height: 86px;
