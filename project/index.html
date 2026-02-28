@@ -236,6 +236,23 @@
       });
     }
 
+    function addStateLabels(layer, map) {
+      layer.eachLayer((stateLayer) => {
+        const name = getStateName(stateLayer.feature);
+        const bounds = stateLayer.getBounds?.();
+        if (!bounds || !bounds.isValid()) return;
+        const center = bounds.getCenter();
+        L.marker(center, {
+          interactive: false,
+          keyboard: false,
+          icon: L.divIcon({
+            className: "state-name-label-wrap",
+            html: `<span class="state-name-label">${escapeHtml(name)}</span>`
+          })
+        }).addTo(map);
+      });
+    }
+
     function getMapByKey(mapKey) {
       if (mapKey === "ak") return akMap;
       if (mapKey === "hi") return hiMap;
@@ -393,6 +410,7 @@
           onEachFeature: attachInteractions
         }).addTo(mainMap);
         cacheStateCenters(lowerLayer, "main");
+        addStateLabels(lowerLayer, mainMap);
 
         mainMap.fitBounds(lowerLayer.getBounds(), { padding: [40, 40] });
         addLegend(mainMap);
@@ -404,6 +422,7 @@
           onEachFeature: attachInteractions
         }).addTo(akMap);
         cacheStateCenters(akLayer, "ak");
+        addStateLabels(akLayer, akMap);
 
         if (akLayer.getBounds().isValid()) {
           akMap.fitBounds(akLayer.getBounds(), { padding: [10, 10] });
@@ -415,6 +434,7 @@
           onEachFeature: attachInteractions
         }).addTo(hiMap);
         cacheStateCenters(hiLayer, "hi");
+        addStateLabels(hiLayer, hiMap);
 
         if (hiLayer.getBounds().isValid()) {
           hiMap.fitBounds(hiLayer.getBounds(), { padding: [10, 10] });
