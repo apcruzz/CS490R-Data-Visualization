@@ -335,6 +335,35 @@ p{ margin:0; opacity:.75; }
   outline-offset: 1px;
 }
 
+.quiz-check-row{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin: 4px 0 8px;
+  cursor: pointer;
+}
+
+.quiz-check-row input{
+  margin: 0;
+}
+
+.quiz-gender-group{
+  display: grid;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.quiz-gender-options{
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.quiz-gender-options .quiz-check-row{
+  margin: 0;
+}
+
 .quiz-progress{
   font-size: 12px;
   opacity: 0.7;

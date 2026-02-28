@@ -78,7 +78,10 @@
     const STATE_DATA = window.STATE_VISIT_DATA || {};
     const VALUE_FIELD = "visitation2024k"; // values are in thousands (000)
     const colorBreaks = [50, 100, 250, 500, 1000, 2000, 4000, 8000];
-    const AVATAR_IMAGE_SRC = "avatar.png";
+    const AVATAR_IMAGE_SRC_BY_KEY = {
+      default: "images/avatar.png",
+      wahine: "images/Wahine.png"
+    };
     const AVATAR_STORAGE_KEY = "state-avatar-history-v1";
     const AVATAR_SLOT_SPACING = 18;
 
@@ -265,7 +268,8 @@
       try {
         const payload = avatarMarkers.map((item) => ({
           personName: item.personName,
-          stateName: item.stateName
+          stateName: item.stateName,
+          avatarKey: item.avatarKey || "default"
         }));
         localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(payload));
       } catch (_) {}
@@ -277,7 +281,9 @@
         if (!raw) return [];
         const parsed = JSON.parse(raw);
         if (!Array.isArray(parsed)) return [];
-        return parsed.filter((item) => item && item.personName && item.stateName);
+        return parsed
+          .filter((item) => item && item.personName && item.stateName)
+          .map((item) => ({ ...item, avatarKey: item.avatarKey || "default" }));
       } catch (_) {
         return [];
       }
@@ -346,16 +352,19 @@
       if (!target) return false;
 
       const map = getMapByKey(target.mapKey);
-      const safeName = escapeHtml(personName || "Traveler");
+      const rawName = String(personName || "Traveler");
+      const safeName = escapeHtml(rawName);
       const initials = getInitials(personName);
       const xOffset = getAvatarOffsetForState(stateName);
+      const avatarKey = options.avatarKey === "wahine" ? "wahine" : "default";
+      const avatarSrc = AVATAR_IMAGE_SRC_BY_KEY[avatarKey] || AVATAR_IMAGE_SRC_BY_KEY.default;
 
       const icon = L.divIcon({
         className: "state-avatar-wrap",
         html: `
           <div class="state-avatar-slot" style="transform: translateX(${xOffset}px);" aria-hidden="true">
             <div class="state-avatar-person">
-              <img class="state-avatar-image" src="${AVATAR_IMAGE_SRC}" alt="Avatar" />
+              <img class="state-avatar-image" src="${avatarSrc}" alt="Avatar" onerror="this.onerror=null;this.src='images/avatar.png';" />
               <div class="person-label">${escapeHtml(initials)}</div>
             </div>
           </div>
@@ -373,7 +382,7 @@
         offset: [0, -14],
         className: "state-tooltip"
       });
-      avatarMarkers.push({ marker, mapKey: target.mapKey, personName: safeName, stateName });
+      avatarMarkers.push({ marker, mapKey: target.mapKey, personName: rawName, stateName, avatarKey });
       if (options.persist !== false) {
         saveAvatarsToStorage();
       }
@@ -383,7 +392,7 @@
     function restoreAvatarsFromStorage() {
       const saved = readAvatarsFromStorage();
       saved.forEach((entry) => {
-        renderStateAvatar(entry.personName, entry.stateName, { persist: false });
+        renderStateAvatar(entry.personName, entry.stateName, { persist: false, avatarKey: entry.avatarKey });
       });
     }
 

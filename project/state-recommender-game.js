@@ -175,8 +175,9 @@
     }[ch]));
   }
 
-  function renderIntro(container, playerName, onInput) {
+  function renderIntro(container, playerName, selectedGender, onChange) {
     const safeName = escapeHtml(playerName || "");
+    const gender = selectedGender === "female" ? "female" : "male";
     container.innerHTML = `
       <div class="quiz-progress">Start</div>
       <h3 class="quiz-question">Enter your name to begin</h3>
@@ -184,17 +185,57 @@
         <label class="quiz-helper" for="quiz-name-input">Name</label>
         <input id="quiz-name-input" class="quiz-name-input" type="text" maxlength="40" placeholder="Type your name" value="${safeName}" />
       </div>
+      <div class="quiz-gender-group">
+        <div class="quiz-helper">Gender</div>
+        <div class="quiz-gender-options">
+          <label class="quiz-check-row" for="quiz-gender-male">
+            <input id="quiz-gender-male" type="checkbox" ${gender === "male" ? "checked" : ""} />
+            <span>Male</span>
+          </label>
+          <label class="quiz-check-row" for="quiz-gender-female">
+            <input id="quiz-gender-female" type="checkbox" ${gender === "female" ? "checked" : ""} />
+            <span>Female</span>
+          </label>
+        </div>
+      </div>
       <p class="quiz-helper">You will answer 5 random questions.</p>
     `;
 
     const input = container.querySelector("#quiz-name-input");
-    if (!input) return;
+    const maleCheck = container.querySelector("#quiz-gender-male");
+    const femaleCheck = container.querySelector("#quiz-gender-female");
+    if (!input || !maleCheck || !femaleCheck) return;
+
+    function getGender() {
+      if (femaleCheck.checked) return "female";
+      return "male";
+    }
+
+    function syncExclusive(changed) {
+      if (changed === "male") {
+        maleCheck.checked = true;
+        femaleCheck.checked = false;
+      } else {
+        femaleCheck.checked = true;
+        maleCheck.checked = false;
+      }
+    }
+
     input.focus();
-    input.addEventListener("input", () => onInput(input.value));
+    const emit = () => onChange({ name: input.value, gender: getGender() });
+    input.addEventListener("input", emit);
+    maleCheck.addEventListener("change", () => {
+      syncExclusive("male");
+      emit();
+    });
+    femaleCheck.addEventListener("change", () => {
+      syncExclusive("female");
+      emit();
+    });
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
-        onInput(input.value);
+        emit();
       }
     });
   }
@@ -248,7 +289,7 @@
     });
   }
 
-  function renderResult(container, answers, questions, playerName) {
+  function renderResult(container, answers, questions, playerName, selectedGender) {
     const ranked = computeRecommendations(answers, questions);
     const top = ranked[0];
     const stateData = (window.STATE_VISIT_DATA || {})[top.state];
@@ -269,7 +310,9 @@
     `;
 
     if (typeof window.renderStateAvatar === "function") {
-      window.renderStateAvatar(playerName, top.state);
+      window.renderStateAvatar(playerName, top.state, {
+        avatarKey: selectedGender === "female" ? "wahine" : "default"
+      });
     }
   }
 
@@ -285,13 +328,15 @@
 
     let questions = getRandomQuestions(5);
     let playerName = "";
+    let selectedGender = "male";
     const answers = [];
     let step = -1;
 
     function showStep() {
       if (step < 0) {
-        renderIntro(body, playerName, (value) => {
-          playerName = value.trim();
+        renderIntro(body, playerName, selectedGender, ({ name, gender }) => {
+          playerName = name.trim();
+          selectedGender = gender === "female" ? "female" : "male";
           nextBtn.disabled = !playerName;
         });
         backBtn.disabled = true;
@@ -307,7 +352,7 @@
         nextBtn.textContent = step === questions.length - 1 ? "See result" : "Next";
         nextBtn.disabled = !answers[step];
       } else {
-        renderResult(body, answers, questions, playerName);
+        renderResult(body, answers, questions, playerName, selectedGender);
         backBtn.disabled = true;
         nextBtn.disabled = true;
         nextBtn.textContent = "Done";
@@ -316,6 +361,7 @@
           restartBtn.addEventListener("click", () => {
             questions = getRandomQuestions(5);
             playerName = "";
+            selectedGender = "male";
             answers.length = 0;
             step = -1;
             showStep();
