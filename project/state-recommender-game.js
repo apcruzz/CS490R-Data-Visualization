@@ -149,6 +149,87 @@
         { id: "balanced", label: "Balanced price and location", apply: [{ group: "balancedCost", score: 3 }, { group: "suburban", score: 1 }] },
         { id: "save", label: "Lower cost is key", apply: [{ group: "affordable", score: 3 }, { group: "rural", score: 1 }] }
       ]
+    },
+    {
+      id: "familyLife",
+      prompt: "Which environment sounds best for family life?",
+      options: [
+        { id: "family-suburb", label: "Quiet suburban neighborhoods", apply: [{ group: "suburban", score: 3 }, { group: "balancedCost", score: 1 }] },
+        { id: "family-city", label: "City with lots of activities", apply: [{ group: "urban", score: 3 }, { group: "entertainment", score: 1 }] },
+        { id: "family-rural", label: "Open space and small communities", apply: [{ group: "rural", score: 3 }, { group: "quiet", score: 1 }] }
+      ]
+    },
+    {
+      id: "commuteTolerance",
+      prompt: "How much commute/travel time is okay for you?",
+      options: [
+        { id: "short", label: "I want very short commutes", apply: [{ group: "quiet", score: 2 }, { group: "suburban", score: 2 }] },
+        { id: "moderate", label: "Moderate commute is fine", apply: [{ group: "suburban", score: 3 }, { group: "balancedCost", score: 1 }] },
+        { id: "long", label: "Long commute is okay for opportunities", apply: [{ group: "urban", score: 2 }, { group: "jobs", score: 2 }] }
+      ]
+    },
+    {
+      id: "socialEnergy",
+      prompt: "How social do you want your city/state to feel?",
+      options: [
+        { id: "high-social", label: "Always active and social", apply: [{ group: "entertainment", score: 3 }, { group: "urban", score: 1 }] },
+        { id: "medium-social", label: "Some events, not too crowded", apply: [{ group: "suburban", score: 2 }, { group: "balancedCost", score: 2 }] },
+        { id: "low-social", label: "Calm and private", apply: [{ group: "quiet", score: 3 }, { group: "rural", score: 1 }] }
+      ]
+    },
+    {
+      id: "seasonPreference",
+      prompt: "What seasonal pattern do you prefer?",
+      options: [
+        { id: "minimal-winter", label: "Minimal winter", apply: [{ group: "warm", score: 3 }, { group: "entertainment", score: 1 }] },
+        { id: "balanced-seasons", label: "Balanced four seasons", apply: [{ group: "mild", score: 3 }, { group: "suburban", score: 1 }] },
+        { id: "winter-heavy", label: "Real winter and snow", apply: [{ group: "cold", score: 3 }, { group: "nature", score: 1 }] }
+      ]
+    },
+    {
+      id: "airportAccess",
+      prompt: "How important is airport/international access?",
+      options: [
+        { id: "very-important", label: "Very important", apply: [{ group: "urban", score: 3 }, { group: "jobs", score: 1 }] },
+        { id: "somewhat-important", label: "Somewhat important", apply: [{ group: "suburban", score: 3 }, { group: "balancedCost", score: 1 }] },
+        { id: "not-important", label: "Not that important", apply: [{ group: "quiet", score: 2 }, { group: "rural", score: 2 }] }
+      ]
+    },
+    {
+      id: "activityBudget",
+      prompt: "How much do you want to spend on fun each month?",
+      options: [
+        { id: "high-spend", label: "I can spend more for experiences", apply: [{ group: "premium", score: 2 }, { group: "entertainment", score: 2 }] },
+        { id: "mid-spend", label: "Moderate budget", apply: [{ group: "balancedCost", score: 3 }, { group: "suburban", score: 1 }] },
+        { id: "low-spend", label: "Keep it low-cost", apply: [{ group: "affordable", score: 3 }, { group: "quiet", score: 1 }] }
+      ]
+    },
+    {
+      id: "weeknightStyle",
+      prompt: "How do you usually spend weeknights?",
+      options: [
+        { id: "go-out", label: "Go out often", apply: [{ group: "urban", score: 2 }, { group: "entertainment", score: 2 }] },
+        { id: "mixed-nights", label: "Mix of out and home", apply: [{ group: "suburban", score: 3 }, { group: "balancedCost", score: 1 }] },
+        { id: "home-first", label: "Mostly stay home", apply: [{ group: "quiet", score: 3 }, { group: "rural", score: 1 }] }
+      ]
+    },
+    {
+      id: "natureType",
+      prompt: "What kind of nature access matters most?",
+      options: [
+        { id: "beach", label: "Beaches and coastline", apply: [{ group: "warm", score: 2 }, { group: "nature", score: 2 }] },
+        { id: "mountains", label: "Mountains/trails", apply: [{ group: "nature", score: 3 }, { group: "cold", score: 1 }] },
+        { id: "parks", label: "Local parks and green areas", apply: [{ group: "suburban", score: 2 }, { group: "quiet", score: 2 }] }
+      ]
+    },
+    {
+      id: "lifeStage",
+      prompt: "Which life stage are you prioritizing now?",
+      options: [
+        { id: "career-growth", label: "Career growth", apply: [{ group: "jobs", score: 3 }, { group: "urban", score: 1 }] },
+        { id: "settling-down", label: "Settling down", apply: [{ group: "suburban", score: 3 }, { group: "balancedCost", score: 1 }] },
+        { id: "slower-phase", label: "Slower pace", apply: [{ group: "quiet", score: 3 }, { group: "rural", score: 1 }] }
+      ]
     }
   ];
 
