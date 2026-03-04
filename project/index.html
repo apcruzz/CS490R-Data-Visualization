@@ -3,509 +3,1357 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>2024 Overseas Visitors by State</title>
-
+  <title>Find Your State — U.S. Data Explorer</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
-  <header>
-    <div class="header-copy">
-      <h1>2024 Overseas Visitors by State</h1>
-      <p>Leaflet choropleth using NTTO state visitation totals (2024, thousands of visitors)</p>
+  <!-- ═══════════════════════════════════════
+       LEFT PANEL — Study Quiz + Match Quiz
+  ═══════════════════════════════════════ -->
+  <aside class="quiz-panel" aria-label="Left panel">
+
+    <div class="quiz-panel-header">
+      <div class="panel-mode-tabs">
+        <button type="button" class="panel-tab active" id="tab-study">Map Study</button>
+        <button type="button" class="panel-tab" id="tab-match">Find Your State ★</button>
+      </div>
     </div>
-    <nav class="view-tabs" aria-label="Visualization views">
-      <button type="button" class="view-tab is-active" data-tab-target="tab-map">Map</button>
-      <button type="button" class="view-tab" data-tab-target="tab-charts">Charts</button>
-    </nav>
-  </header>
 
-  <section id="tab-map" class="tab-panel is-active">
-    <div class="map-wrap">
+    <!-- STUDY MODE -->
+    <div id="panel-study" class="panel-view">
+      <div class="panel-view-body" id="study-body"></div>
+      <div class="panel-view-footer" id="study-footer"></div>
+    </div>
+
+    <!-- MATCH MODE -->
+    <div id="panel-match" class="panel-view" style="display:none">
+      <div class="panel-view-body" id="match-body">
+        <div id="quiz-body"></div>
+      </div>
+      <div class="panel-view-footer">
+        <button id="quiz-back-btn" type="button" class="quiz-btn quiz-btn-ghost">Back</button>
+        <button id="quiz-next-btn" type="button" class="quiz-btn quiz-btn-primary">Start</button>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ═══════════════════════════════════════
+       MAIN — Map + Dataset Tabs
+  ═══════════════════════════════════════ -->
+  <main class="main-area">
+    <div class="map-header">
+      <h1 class="map-title">U.S. State Data Explorer</h1>
+      <div class="dataset-tabs" id="dataset-tabs"></div>
+      <button type="button" class="view-tab-btn" id="btn-charts-view">Charts View</button>
+    </div>
+
+    <div class="map-container">
       <div id="map"></div>
-
       <div class="inset">
         <div id="map-ak" class="inset-map" title="Alaska"></div>
         <div id="map-hi" class="inset-map" title="Hawaii"></div>
       </div>
+      <!-- Travel sub-toggle, shown only on travel tab -->
+      <div id="travel-subview-wrap" class="travel-subview" style="display:none">
+        <button type="button" class="tv-btn active" data-view="rank">By Volume</button>
+        <button type="button" class="tv-btn" data-view="growth">YoY Growth</button>
+      </div>
     </div>
-
-    <button id="quiz-open-btn" class="quiz-fab" type="button" aria-expanded="false" aria-controls="quiz-panel">
-      State Match Quiz
-    </button>
 
     <div class="avatar-controls" aria-label="Avatar controls">
       <button id="avatar-toggle-btn" class="avatar-btn" type="button">Hide Avatars</button>
       <button id="avatar-clear-btn" class="avatar-btn danger" type="button">Clear Avatars</button>
     </div>
 
-    <section id="quiz-panel" class="quiz-panel" aria-label="State recommendation quiz">
-      <div class="quiz-panel-header">
-        <h2>Find Your State Match</h2>
-        <button id="quiz-close-btn" type="button" class="quiz-close-btn" aria-label="Close quiz">X</button>
-      </div>
-      <div id="quiz-body" class="quiz-body"></div>
-      <div class="quiz-controls">
-        <button id="quiz-back-btn" type="button" class="quiz-nav-btn">Back</button>
-        <button id="quiz-next-btn" type="button" class="quiz-nav-btn primary">Next</button>
-      </div>
-    </section>
-  </section>
+    <div class="map-footer" id="map-footer">
+      <!-- desc text rendered by JS -->
+    </div>
+  </main>
 
-  <section id="tab-charts" class="tab-panel">
+
+  <!-- ═══════════════════════════════════════
+       CHARTS VIEW (from partner code)
+  ═══════════════════════════════════════ -->
+  <div id="charts-view" class="charts-view" style="display:none">
     <div class="charts-wrap">
       <div class="chart-card chart-wide">
         <h3>Top States by 2024 Visitation</h3>
         <canvas id="bar-chart"></canvas>
       </div>
       <div class="chart-card">
-        <h3>2024 Share (Top States + Other)</h3>
+        <h3>2024 Market Share (Top States + Other)</h3>
         <canvas id="pie-chart"></canvas>
       </div>
       <div class="chart-card chart-wide">
-        <h3>2023 vs 2024 by State</h3>
+        <h3>2023 vs 2024 Visitation by State</h3>
         <canvas id="line-chart"></canvas>
       </div>
     </div>
-  </section>
+  </div>
 
+  <!-- Scripts -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="state-visit-data.js"></script>
+  <script src="states-demographic-data.js"></script>
+  <script src="states-economic-data.js"></script>
 
   <script>
-    const STATE_DATA = window.STATE_VISIT_DATA || {};
-    const VALUE_FIELD = "visitation2024k"; // values are in thousands (000)
-    const colorBreaks = [50, 100, 250, 500, 1000, 2000, 4000, 8000];
-    const AVATAR_IMAGE_SRC_BY_KEY = {
-      default: "images/avatar.png",
-      wahine: "images/Wahine.png"
-    };
-    const AVATAR_STORAGE_KEY = "state-avatar-history-v1";
-    const AVATAR_SLOT_SPACING = 18;
+  // ══════════════════════════════════════════════════════════════════
+  // HELPERS
+  // ══════════════════════════════════════════════════════════════════
+  function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function escHtml(v) {
+    return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function getStateName(f) { return f?.properties?.name || f?.id || "State"; }
 
-    function cssVar(name) {
-      const css = getComputedStyle(document.documentElement);
-      return css.getPropertyValue(name).trim();
-    }
+  // ══════════════════════════════════════════════════════════════════
+  // DATA SOURCES
+  // ══════════════════════════════════════════════════════════════════
+  function visitData()  { return window.STATE_VISIT_DATA        || {}; }
+  function demogData()  { return window.STATE_DEMOGRAPHICS_DATA || {}; }
+  function econData()   { return window.STATE_ECONOMIC_DATA     || {}; }
 
-    function getStateName(feature) {
-      return feature?.properties?.name || feature?.id || "State";
-    }
+  // ══════════════════════════════════════════════════════════════════
+  // DATASET REGISTRY
+  // ══════════════════════════════════════════════════════════════════
+  const SECTOR_COLORS = {
+    "Mining & Oil/Gas":"#a16207","Utilities":"#0369a1","Construction":"#b45309",
+    "Wholesale Trade":"#0891b2","Information":"#7c3aed","Finance & Insurance":"#be185d",
+    "Real Estate":"#0f766e","Professional Services":"#4f46e5","Management":"#6d28d9",
+    "Admin & Waste Mgmt":"#9d174d","Educational Services":"#1d4ed8","Health Care":"#059669",
+    "Arts & Entertainment":"#d97706","Accommodation & Food":"#dc2626","Other Services":"#6b7280"
+  };
 
-    function getStateMetric(feature) {
-      return STATE_DATA[getStateName(feature)] || null;
-    }
-
-    function getFillColor(metric) {
-      if (!metric || typeof metric[VALUE_FIELD] !== "number") return cssVar("--no-data");
-      const v = metric[VALUE_FIELD];
-      if (v > colorBreaks[7]) return "#6e1711";
-      if (v > colorBreaks[6]) return "#9b2219";
-      if (v > colorBreaks[5]) return "#c33a1f";
-      if (v > colorBreaks[4]) return "#e05a2a";
-      if (v > colorBreaks[3]) return "#ef8354";
-      if (v > colorBreaks[2]) return "#f4a261";
-      if (v > colorBreaks[1]) return "#f8bf85";
-      if (v > colorBreaks[0]) return "#fbd7ac";
-      return "#fee9cf";
-    }
-
-    function baseStyle(feature){
-      const metric = getStateMetric(feature);
-      return {
-        color: cssVar("--stroke"),
-        weight: 1,
-        fillColor: getFillColor(metric),
-        fillOpacity: 0.95
-      };
-    }
-
-    function hoverStyle(){
-      return {
-        color: "#ffffff",
-        weight: 2,
-        fillColor: cssVar("--hover"),
-        fillOpacity: 1
-      };
-    }
-
-    function formatThousands(value) {
-      return typeof value === "number" ? `${value.toLocaleString()}k` : "No data";
-    }
-
-    function formatPercent(value) {
-      return typeof value === "number" ? `${(value * 100).toFixed(1)}%` : "No data";
-    }
-
-    function attachInteractions(feature, layer){
-      const name = getStateName(feature);
-      const metric = getStateMetric(feature);
-      const tooltipHtml = `
-        <div class="tooltip-title">${name}</div>
-        <div>${metric ? `Rank: ${metric.rank}` : "Rank: No data"}</div>
-        <div>2024 visitation: ${formatThousands(metric?.visitation2024k)}</div>
-        <div>2023 visitation: ${formatThousands(metric?.visitation2023k)}</div>
-        <div>YoY change: ${formatPercent(metric?.pctChange)}</div>
-        <div>2024 market share: ${formatPercent(metric?.marketShare2024)}</div>
-      `;
-
-      layer.bindTooltip(tooltipHtml, {
-        sticky: true,
-        direction: "auto",
-        className: "state-tooltip"
-      });
-
-      layer.on("mouseover", () => layer.setStyle(hoverStyle()));
-      layer.on("mouseout", () => layer.setStyle(baseStyle(feature)));
-    }
-
-    function addLegend(map) {
-      const legend = L.control({ position: "bottomleft" });
-      legend.onAdd = function() {
-        const div = L.DomUtil.create("div", "map-legend");
-        const labels = [];
-        let from = 0;
-
-        for (const to of colorBreaks) {
-          labels.push(
-            `<div class="legend-row"><span class="swatch" style="background:${getFillColor({ [VALUE_FIELD]: to - 1 })}"></span>${from.toLocaleString()}-${to.toLocaleString()}k</div>`
-          );
-          from = to;
+  const DATASETS = {
+    visitors: {
+      label: "Visitors",
+      overlayType: "none",
+      travelView: "rank",
+      desc: () => DATASETS.visitors.travelView === "rank"
+        ? "Choropleth by 2024 overseas visitor volume — darker = more visitors"
+        : "Year-over-year growth 2023→2024 — green = growing, red = declining",
+      choroplethFn: (state) => {
+        const d = visitData()[state];
+        if (DATASETS.visitors.travelView === "rank") {
+          if (!d || typeof d.visitation2024k !== "number") return null;
+          const v = d.visitation2024k;
+          if (v > 8000) return "#6e1711"; if (v > 4000) return "#9b2219";
+          if (v > 2000) return "#c33a1f"; if (v > 1000) return "#e05a2a";
+          if (v >  500) return "#ef8354"; if (v >  250) return "#f4a261";
+          if (v >  100) return "#f8bf85"; if (v >   50) return "#fbd7ac";
+          return "#fee9cf";
+        } else {
+          if (!d || typeof d.pctChange !== "number") return null;
+          const g = d.pctChange;
+          if (g > 0.25) return "#1a5c2a"; if (g > 0.18) return "#2d8040";
+          if (g > 0.12) return "#40a857"; if (g > 0.07) return "#6abf78";
+          if (g > 0.03) return "#9ed4a8"; if (g > 0.00) return "#ccebd3";
+          if (g > -0.05) return "#fdd8c4"; if (g > -0.10) return "#f99c74";
+          return "#d64a1e";
         }
-        labels.push(
-          `<div class="legend-row"><span class="swatch" style="background:${getFillColor({ [VALUE_FIELD]: colorBreaks[colorBreaks.length - 1] + 1 })}"></span>${colorBreaks[colorBreaks.length - 1].toLocaleString()}k+</div>`
-        );
-        labels.push(
-          `<div class="legend-row"><span class="swatch" style="background:${cssVar("--no-data")}"></span>No data</div>`
-        );
+      },
+      tooltipFn: (state) => {
+        const d = visitData()[state];
+        if (!d) return null;
+        const fmtK = v => typeof v === "number" ? v.toLocaleString()+"k" : "—";
+        const fmtP = v => typeof v === "number" ? (v*100).toFixed(1)+"%" : "—";
+        const gColor = d.pctChange > 0 ? "#4ade80" : d.pctChange < 0 ? "#f87171" : "#aaa";
+        const gArrow = d.pctChange > 0 ? "▲" : d.pctChange < 0 ? "▼" : "—";
+        return `<div class="tt-label">Overseas Visitors (2024)</div>
+          <div><span class="tt-k">Rank:</span> <strong>#${d.rank ?? "—"}</strong></div>
+          <div><span class="tt-k">2024:</span> <strong>${fmtK(d.visitation2024k)}</strong></div>
+          <div><span class="tt-k">2023:</span> <strong>${fmtK(d.visitation2023k)}</strong></div>
+          <div><span class="tt-k">YoY:</span> <strong style="color:${gColor}">${gArrow} ${fmtP(d.pctChange)}</strong></div>
+          <div><span class="tt-k">Mkt share:</span> <strong>${fmtP(d.marketShare2024)}</strong></div>`;
+      }
+    },
 
-        div.innerHTML = `
-          <div class="legend-title">2024 visitation (000)</div>
-          ${labels.join("")}
-          <div class="legend-note">Source: NTTO / SIAT (workbook provided)</div>
-        `;
-        return div;
-      };
-      legend.addTo(map);
-    }
+    population: {
+      label: "Population",
+      overlayType: "none",
+      desc: () => "State population by 2022 ACS — darker blue = more residents",
+      choroplethFn: (state) => {
+        const d = demogData()[state]?.["2022"];
+        if (!d?.population) return null;
+        const v = d.population;
+        if (v > 25e6) return "#08306b"; if (v > 15e6) return "#08519c";
+        if (v > 10e6) return "#2171b5"; if (v >  7e6) return "#4292c6";
+        if (v >  4e6) return "#6baed6"; if (v >  2e6) return "#9ecae1";
+        if (v >  1e6) return "#c6dbef"; return "#deebf7";
+      },
+      tooltipFn: (state) => {
+        const d = demogData()[state]?.["2022"];
+        if (!d) return null;
+        const fmt = v => v >= 1e6 ? (v/1e6).toFixed(2)+"M" : (v/1e3).toFixed(0)+"K";
+        return `<div class="tt-label">Population (2022 ACS)</div>
+          <div><span class="tt-k">Total:</span> <strong>${d.population ? fmt(d.population) : "—"}</strong></div>
+          <div><span class="tt-k">Median age:</span> <strong>${d.medianAge ? d.medianAge.toFixed(1)+" yrs" : "—"}</strong></div>`;
+      }
+    },
 
-    function addSummaryPill(map, geojson) {
-      const total = geojson.features.reduce((sum, f) => {
-        const v = getStateMetric(f)?.[VALUE_FIELD];
-        return sum + (typeof v === "number" ? v : 0);
-      }, 0);
-      const count = geojson.features.filter(f => typeof getStateMetric(f)?.[VALUE_FIELD] === "number").length;
-      const pill = L.control({ position: "topright" });
-      pill.onAdd = function() {
-        const div = L.DomUtil.create("div", "map-pill");
-        div.innerHTML = `<strong>${count}</strong> map regions with data • <strong>${total.toLocaleString()}k</strong> total visitors`;
-        return div;
-      };
-      pill.addTo(map);
-    }
+    gender: {
+      label: "Gender",
+      overlayType: "pie",
+      bubbleField: "male", bubbleMin: 45, bubbleMax: 55,
+      desc: () => "Gender split — blue = higher male %, pink = higher female % (2022 ACS)",
+      choroplethFn: (state) => {
+        const d = demogData()[state]?.["2022"];
+        if (!d || typeof d.male !== "number") return null;
+        const m = d.male;
+        if (m > 51.5) return "#08519c"; if (m > 51.0) return "#2171b5";
+        if (m > 50.5) return "#6baed6"; if (m > 50.0) return "#b0cfe8";
+        if (m > 49.5) return "#f7b6d2"; if (m > 49.0) return "#f768a1";
+        if (m > 48.5) return "#dd3497"; return "#ae017e";
+      },
+      tooltipFn: (state) => {
+        const d = demogData()[state]?.["2022"];
+        if (!d) return null;
+        return `<div class="tt-label">Gender (2022 ACS)</div>
+          <div><span class="tt-k">Male:</span> <strong>${d.male?.toFixed(1)}%</strong></div>
+          <div><span class="tt-k">Female:</span> <strong>${d.female?.toFixed(1)}%</strong></div>`;
+      }
+    },
 
-    const stateCenters = {};
-    const avatarMarkers = [];
-    let avatarsVisible = true;
+    race: {
+      label: "Race",
+      overlayType: "bar",
+      barGroups: [
+        {key:"white",label:"White",color:"#6baed6"},{key:"hispanic",label:"Hispanic",color:"#fd8d3c"},
+        {key:"black",label:"Black",color:"#74c476"},{key:"asian",label:"Asian",color:"#9e9ac8"},
+        {key:"nativeAmerican",label:"Native Am.",color:"#f768a1"},{key:"twoOrMore",label:"Two+",color:"#bdbdbd"}
+      ],
+      desc: () => "Racial diversity index — darker green = more diverse; bar charts show breakdown per state (2022 ACS)",
+      choroplethFn: (state) => {
+        const d = demogData()[state]?.["2022"];
+        if (!d) return null;
+        const ks = ["white","black","hispanic","asian","nativeAmerican","pacificIslander","twoOrMore"];
+        const tot = ks.reduce((s,k)=>s+(d[k]||0),0);
+        if (tot <= 0) return null;
+        const hhi = ks.reduce((s,k)=>{const p=(d[k]||0)/tot;return s+p*p;},0);
+        const div = 1 - hhi;
+        if (div > 0.70) return "#1b4332"; if (div > 0.60) return "#2d6a4f";
+        if (div > 0.50) return "#40916c"; if (div > 0.42) return "#52b788";
+        if (div > 0.35) return "#74c69d"; if (div > 0.28) return "#95d5b2";
+        if (div > 0.20) return "#b7e4c7"; return "#d8f3dc";
+      },
+      tooltipFn: (state) => {
+        const d = demogData()[state]?.["2022"];
+        if (!d) return null;
+        const pct = v => typeof v==="number" ? v.toFixed(1)+"%" : "—";
+        return `<div class="tt-label">Race & Ethnicity (2022 ACS)</div>
+          <div><span class="tt-k">White:</span> <strong>${pct(d.white)}</strong></div>
+          <div><span class="tt-k">Hispanic:</span> <strong>${pct(d.hispanic)}</strong></div>
+          <div><span class="tt-k">Black:</span> <strong>${pct(d.black)}</strong></div>
+          <div><span class="tt-k">Asian:</span> <strong>${pct(d.asian)}</strong></div>
+          <div><span class="tt-k">Native Am.:</span> <strong>${pct(d.nativeAmerican)}</strong></div>
+          <div><span class="tt-k">Two+:</span> <strong>${pct(d.twoOrMore)}</strong></div>`;
+      }
+    },
 
-    function escapeHtml(value) {
-      return String(value).replace(/[&<>"']/g, (ch) => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        "\"": "&quot;",
-        "'": "&#39;"
-      }[ch]));
-    }
+    economy: {
+      label: "Economy",
+      overlayType: "none",
+      desc: () => "Dominant industry by employment — color = top sector per state (2022 Economic Census)",
 
-    function getInitials(name) {
-      const initials = String(name || "Traveler")
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0].toUpperCase())
-        .join("");
-      return initials || "T";
-    }
+      SECTOR_CHORO_COLORS: {
+        "Accommodation & Food": "#c2410c",
+        "Health Care":          "#0369a1",
+        "Admin & Waste Mgmt":   "#6d28d9",
+        "Other Services":       "#047857"
+      },
 
-    function cacheStateCenters(layer, mapKey) {
-      layer.eachLayer((stateLayer) => {
-        const name = getStateName(stateLayer.feature);
-        const bounds = stateLayer.getBounds?.();
-        if (bounds && bounds.isValid()) {
-          stateCenters[name] = { mapKey, center: bounds.getCenter() };
-        }
-      });
-    }
+      choroplethFn(state) {
+        const d = econData()[state];
+        if (!d || !d.dominantSector) return null;
+        return this.SECTOR_CHORO_COLORS[d.dominantSector] || "#555";
+      },
 
-    function addStateLabels(layer, map) {
-      layer.eachLayer((stateLayer) => {
-        const name = getStateName(stateLayer.feature);
-        const bounds = stateLayer.getBounds?.();
-        if (!bounds || !bounds.isValid()) return;
-        const center = bounds.getCenter();
-        L.marker(center, {
-          interactive: false,
-          keyboard: false,
-          icon: L.divIcon({
-            className: "state-name-label-wrap",
-            html: `<span class="state-name-label">${escapeHtml(name)}</span>`
-          })
-        }).addTo(map);
-      });
-    }
+      tooltipFn(state) {
+        const d = econData()[state];
+        if (!d || !d.sectors) return null;
 
-    function getMapByKey(mapKey) {
-      if (mapKey === "ak") return akMap;
-      if (mapKey === "hi") return hiMap;
-      return mainMap;
-    }
+        const sectors = Object.values(d.sectors)
+          .filter(s => s.employees > 0)
+          .sort((a, b) => b.employees - a.employees);
+        const maxEmp = sectors[0] ? sectors[0].employees : 1;
+        const totalEmp = sectors.reduce((sum, x) => sum + x.employees, 0);
+        const fmtN = function(v) {
+          if (v >= 1e6) return (v/1e6).toFixed(1) + "M";
+          if (v >= 1e3) return (v/1e3).toFixed(0) + "K";
+          return String(v);
+        };
 
-    function saveAvatarsToStorage() {
-      try {
-        const payload = avatarMarkers.map((item) => ({
-          personName: item.personName,
-          stateName: item.stateName,
-          avatarKey: item.avatarKey || "default"
-        }));
-        localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(payload));
-      } catch (_) {}
-    }
+        const top8 = sectors.slice(0, 8);
+        const barH = 10, gap = 5, labelW = 108, barMaxW = 110, numW = 36;
+        const chartH = top8.length * (barH + gap) - gap;
+        const chartW = labelW + barMaxW + numW;
 
-    function readAvatarsFromStorage() {
-      try {
-        const raw = localStorage.getItem(AVATAR_STORAGE_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return [];
-        return parsed
-          .filter((item) => item && item.personName && item.stateName)
-          .map((item) => ({ ...item, avatarKey: item.avatarKey || "default" }));
-      } catch (_) {
-        return [];
+        const bars = top8.map(function(s, i) {
+          const bw = Math.max(2, Math.round((s.employees / maxEmp) * barMaxW));
+          const y = i * (barH + gap);
+          const color = SECTOR_COLORS[s.label] || "#888";
+          const isDom = s.label === d.dominantSector;
+          const shortLabel = s.label.length > 16 ? s.label.slice(0, 15) + "\u2026" : s.label;
+          const textFill = isDom ? "#e8c36a" : "rgba(255,255,255,0.6)";
+          const textWeight = isDom ? "700" : "400";
+          const barOpacity = isDom ? "1" : "0.6";
+          return [
+            '<g>',
+            '<text x="0" y="' + (y + barH - 1) + '" font-size="8" fill="' + textFill + '" font-weight="' + textWeight + '" font-family="DM Sans,sans-serif">' + shortLabel + '</text>',
+            '<rect x="' + labelW + '" y="' + y + '" width="' + bw + '" height="' + barH + '" fill="' + color + '" opacity="' + barOpacity + '" rx="2"/>',
+            '<text x="' + (labelW + bw + 4) + '" y="' + (y + barH - 1) + '" font-size="8" fill="rgba(255,255,255,0.45)" font-family="DM Sans,sans-serif">' + fmtN(s.employees) + '</text>',
+            '</g>'
+          ].join("");
+        }).join("");
+
+        const fM = function(v) { return v ? "$" + (v/1e9).toFixed(1) + "B" : "\u2014"; };
+
+        return '<div class="tt-label">Economy (2022 Census)</div>'
+          + '<div style="margin-bottom:6px"><span class="tt-k">Top sector: </span>'
+          + '<strong style="color:#e8c36a">' + d.dominantSector + '</strong></div>'
+          + '<svg width="' + chartW + '" height="' + chartH + '" viewBox="0 0 ' + chartW + ' ' + chartH + '" style="display:block;margin-bottom:6px;overflow:visible">'
+          + bars
+          + '</svg>'
+          + '<div style="display:flex;gap:12px;font-size:10px;color:rgba(255,255,255,0.4);border-top:1px solid rgba(255,255,255,0.08);padding-top:5px">'
+          + '<span>Employees: <strong style="color:rgba(255,255,255,0.65)">' + fmtN(totalEmp) + '</strong></span>'
+          + '<span>Revenue: <strong style="color:rgba(255,255,255,0.65)">' + fM(d.totalRevenue) + '</strong></span>'
+          + '</div>';
       }
     }
+  };
 
-    function getAvatarOffsetForState(stateName) {
-      const idx = avatarMarkers.filter((item) => item.stateName === stateName).length;
-      if (idx === 0) return 0;
-      const step = Math.ceil(idx / 2);
-      const dir = idx % 2 === 1 ? -1 : 1;
-      return dir * step * AVATAR_SLOT_SPACING;
+  // ══════════════════════════════════════════════════════════════════
+  // MAP STATE
+  // ══════════════════════════════════════════════════════════════════
+  let activeDataset = "visitors";
+  let allLayers = [];
+  let bubbleMarkers = [];
+  const stateCenters = {};
+  let highlightedState = null; // for quiz result highlight
+
+  function ds() { return DATASETS[activeDataset]; }
+
+  // ── Map init ──
+  const mainMap = L.map("map", {
+    zoomControl: false, attributionControl: false,
+    preferCanvas: true, dragging: true, scrollWheelZoom: true,
+    minZoom: 3, maxZoom: 7
+  });
+  const akMap = L.map("map-ak", {
+    zoomControl: false, attributionControl: false, preferCanvas: true,
+    dragging: false, scrollWheelZoom: false, doubleClickZoom: false,
+    boxZoom: false, keyboard: false, tap: false
+  });
+  const hiMap = L.map("map-hi", {
+    zoomControl: false, attributionControl: false, preferCanvas: true,
+    dragging: false, scrollWheelZoom: false, doubleClickZoom: false,
+    boxZoom: false, keyboard: false, tap: false
+  });
+  L.DomEvent.disableClickPropagation(document.getElementById("map-ak"));
+  L.DomEvent.disableClickPropagation(document.getElementById("map-hi"));
+
+  function getMapByKey(k) {
+    if (k === "ak") return akMap;
+    if (k === "hi") return hiMap;
+    return mainMap;
+  }
+
+
+  // ── State name labels on map (from partner) ──
+  function addStateLabels(layer, map) {
+    layer.eachLayer(function(stateLayer) {
+      const name = getStateName(stateLayer.feature);
+      const bounds = stateLayer.getBounds && stateLayer.getBounds();
+      if (!bounds || !bounds.isValid()) return;
+      L.marker(bounds.getCenter(), {
+        interactive: false,
+        keyboard: false,
+        icon: L.divIcon({
+          className: "state-name-label-wrap",
+          html: '<span class="state-name-label">' + escHtml(name) + '</span>'
+        })
+      }).addTo(map);
+    });
+  }
+
+  function cacheStateCenters(layer, mapKey) {
+    layer.eachLayer(l => {
+      const name = getStateName(l.feature);
+      const bounds = l.getBounds?.();
+      if (bounds?.isValid()) stateCenters[name] = { mapKey, center: bounds.getCenter() };
+    });
+  }
+
+  // ── Styles ──
+  function stateStyle(feature) {
+    const name = getStateName(feature);
+    const fill = ds().choroplethFn(name);
+    // Highlight matched state from quiz
+    if (highlightedState === name) return { color: "#ffd700", weight: 3, fillColor: fill || cssVar("--no-data"), fillOpacity: 0.95 };
+    return { color: cssVar("--stroke"), weight: 1, fillColor: fill || cssVar("--no-data"), fillOpacity: 0.88 };
+  }
+
+  function hoverStyle(feature) {
+    const name = getStateName(feature);
+    return { color: "#fff", weight: 2, fillColor: cssVar("--hover"), fillOpacity: 1 };
+  }
+
+  function attachInteractions(feature, layer) {
+    const name = getStateName(feature);
+    layer.on("mouseover", () => layer.setStyle(hoverStyle(feature)));
+    layer.on("mouseout",  () => layer.setStyle(stateStyle(feature)));
+    bindTooltip(feature, layer);
+  }
+
+  function bindTooltip(feature, layer) {
+    const name = getStateName(feature);
+    const extra = ds().tooltipFn ? ds().tooltipFn(name) : "";
+    layer.unbindTooltip();
+    layer.bindTooltip(`<div class="tt-title">${name}</div>${extra||""}`, {
+      sticky: true, direction: "auto", className: "state-tooltip"
+    });
+  }
+
+  // ── Choropleth repaint ──
+  function repaint() {
+    allLayers.forEach(({feature, layer}) => layer.setStyle(stateStyle(feature)));
+  }
+
+  function refreshTooltips() {
+    allLayers.forEach(({feature, layer}) => bindTooltip(feature, layer));
+  }
+
+  // ── Overlays ──
+  function clearOverlays() {
+    bubbleMarkers.forEach(({marker, mapKey}) => {
+      const m = getMapByKey(mapKey);
+      if (m.hasLayer(marker)) m.removeLayer(marker);
+    });
+    bubbleMarkers = [];
+    allLayers.forEach(({layer}) => {
+      layer.off("mouseover mouseout");
+      layer.on("mouseover", evt => layer.setStyle(hoverStyle(evt.target.feature)));
+      layer.on("mouseout",  evt => layer.setStyle(stateStyle(evt.target.feature)));
+    });
+  }
+
+  function buildPieSvg(slices, r) {
+    const tot = slices.reduce((s,sl)=>s+sl.value,0);
+    if (tot<=0) return `<circle cx="${r}" cy="${r}" r="${r}" fill="#ccc"/>`;
+    let paths="", ang=-Math.PI/2;
+    slices.forEach(sl => {
+      const p=sl.value/tot; if(p<=0)return;
+      const sw=p*2*Math.PI, ea=ang+sw;
+      const x1=r+r*Math.cos(ang), y1=r+r*Math.sin(ang);
+      const x2=r+r*Math.cos(ea),  y2=r+r*Math.sin(ea);
+      const la=sw>Math.PI?1:0;
+      if(p>=0.9999) paths+=`<circle cx="${r}" cy="${r}" r="${r}" fill="${sl.color}" opacity=".85"/>`;
+      else paths+=`<path d="M${r},${r} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${la},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${sl.color}" opacity=".85"/>`;
+      ang=ea;
+    });
+    return `<svg width="${r*2}" height="${r*2}" viewBox="0 0 ${r*2} ${r*2}" xmlns="http://www.w3.org/2000/svg">${paths}<circle cx="${r}" cy="${r}" r="${r}" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="1.5"/></svg>`;
+  }
+
+  function renderPieBubbles() {
+    const d = ds();
+    allLayers.forEach(({feature, layer}) => {
+      const name = getStateName(feature);
+      const rec = demogData()[name]?.["2022"];
+      if (!rec) return;
+      const val = rec[d.bubbleField];
+      if (typeof val !== "number") return;
+      const center = stateCenters[name]; if (!center) return;
+      const norm = Math.max(0, Math.min(1, (val-(d.bubbleMin||0))/((d.bubbleMax||100)-(d.bubbleMin||0))));
+      const r = Math.round(6 + norm*(40-6));
+      const slices = [{value:rec.male||0,color:"#4292c6"},{value:rec.female||0,color:"#e05a8a"}];
+      const mkIcon = (rr, shadow) => L.divIcon({ className:"", iconSize:[rr*2,rr*2], iconAnchor:[rr,rr],
+        html:`<div style="width:${rr*2}px;height:${rr*2}px;border-radius:50%;overflow:hidden;box-shadow:${shadow};">${buildPieSvg(slices,rr)}</div>`});
+      const marker = L.marker(center.center, {icon:mkIcon(r,"0 2px 10px rgba(0,0,0,.25)"), interactive:false, keyboard:false});
+      marker.addTo(getMapByKey(center.mapKey));
+      bubbleMarkers.push({marker, mapKey:center.mapKey});
+      layer.on("mouseover", ()=>{marker.setIcon(mkIcon(Math.round(r*2.2),"0 6px 22px rgba(0,0,0,.5)")); marker.setZIndexOffset(1000);});
+      layer.on("mouseout",  ()=>{marker.setIcon(mkIcon(r,"0 2px 10px rgba(0,0,0,.25)")); marker.setZIndexOffset(0);});
+    });
+  }
+
+  function renderBarOverlay() {
+    const d = ds();
+    const groups = d.barGroups;
+    const bW=4, maxH=36, gap=2;
+    const totW = groups.length*(bW+gap)-gap;
+
+    function getBarData(name) {
+      if (activeDataset === "economy") {
+        const econ = econData()[name]; if (!econ) return null;
+        const obj = {};
+        groups.forEach(g => {
+          const sec = Object.values(econ.sectors||{}).find(s=>s.label===g.key);
+          obj[g.key] = sec ? (sec.employees||0) : 0;
+        });
+        const tot = Object.values(obj).reduce((s,v)=>s+v,0);
+        if (tot>0) groups.forEach(g => obj[g.key]=(obj[g.key]/tot)*100);
+        return obj;
+      }
+      return demogData()[name]?.["2022"];
     }
 
-    function updateAvatarButtons() {
-      const toggleBtn = document.getElementById("avatar-toggle-btn");
-      if (!toggleBtn) return;
-      toggleBtn.textContent = avatarsVisible ? "Hide Avatars" : "Show Avatars";
+    function mkBarIcon(data, scale) {
+      const w=Math.round(totW*scale), mH=Math.round(maxH*scale);
+      const bw=Math.round(bW*scale), gp=Math.round(gap*scale);
+      const bars=groups.map((g,i)=>{
+        const v=data[g.key]||0, h=Math.max(2,Math.round((v/100)*mH));
+        return `<rect x="${i*(bw+gp)}" y="${mH-h}" width="${bw}" height="${h}" fill="${g.color}" opacity=".88" rx="1"/>`;
+      }).join("");
+      const shadow = scale>1 ? "0 4px 16px rgba(0,0,0,.5)" : "0 2px 8px rgba(0,0,0,.3)";
+      return L.divIcon({ className:"", iconSize:[w,mH], iconAnchor:[Math.round(w/2),mH],
+        html:`<div style="width:${w}px;filter:drop-shadow(${shadow});"><svg width="${w}" height="${mH}" viewBox="0 0 ${w} ${mH}" xmlns="http://www.w3.org/2000/svg">${bars}</svg></div>`});
     }
 
-    function clearAllAvatars() {
-      avatarMarkers.forEach((item) => {
-        const map = getMapByKey(item.mapKey);
-        if (map.hasLayer(item.marker)) {
-          map.removeLayer(item.marker);
+    allLayers.forEach(({feature, layer}) => {
+      const name = getStateName(feature);
+      const data = getBarData(name); if (!data) return;
+      const center = stateCenters[name]; if (!center) return;
+      const marker = L.marker(center.center, {icon:mkBarIcon(data,1), interactive:false, keyboard:false, zIndexOffset:0});
+      marker.addTo(getMapByKey(center.mapKey));
+      bubbleMarkers.push({marker, mapKey:center.mapKey});
+      layer.on("mouseover", ()=>{marker.setIcon(mkBarIcon(data,3.5)); marker.setZIndexOffset(1000);});
+      layer.on("mouseout",  ()=>{marker.setIcon(mkBarIcon(data,1));   marker.setZIndexOffset(0);});
+    });
+  }
+
+  function renderOverlays() {
+    clearOverlays();
+    const type = ds().overlayType;
+    if (type === "pie") renderPieBubbles();
+    if (type === "bar") renderBarOverlay();
+    // re-attach hover for choropleth-only datasets
+    if (type === "none") {
+      allLayers.forEach(({feature,layer}) => {
+        layer.on("mouseover", ()=>layer.setStyle(hoverStyle(feature)));
+        layer.on("mouseout",  ()=>layer.setStyle(stateStyle(feature)));
+      });
+    }
+  }
+
+  // ── Economy sector legend ──
+  let econLegendEl = null;
+  function updateEconLegend(key) {
+    if (econLegendEl) { econLegendEl.remove(); econLegendEl = null; }
+    if (key !== "economy") return;
+    const colors = DATASETS.economy.SECTOR_CHORO_COLORS;
+    const div = document.createElement("div");
+    div.className = "econ-legend";
+    div.innerHTML = `<div class="econ-legend-title">Dominant sector by employment</div>` +
+      Object.entries(colors).map(([label, color]) =>
+        `<div class="econ-legend-row"><span class="econ-swatch" style="background:${color}"></span>${label}</div>`
+      ).join("") +
+      `<div class="econ-legend-note">Hover any state for full breakdown</div>`;
+    document.querySelector(".map-container").appendChild(div);
+    econLegendEl = div;
+  }
+
+  // ── Dataset switching ──
+  function switchDataset(key) {
+    activeDataset = key;
+    // Update tab UI
+    document.querySelectorAll(".ds-tab").forEach(b => b.classList.toggle("active", b.dataset.key===key));
+    // Show/hide travel sub-toggle
+    const tw = document.getElementById("travel-subview-wrap");
+    tw.style.display = key === "visitors" ? "flex" : "none";
+    // Show/hide economy legend
+    updateEconLegend(key);
+    // Update footer desc
+    document.getElementById("map-footer").textContent = ds().desc();
+    repaint();
+    refreshTooltips();
+    renderOverlays();
+  }
+
+  // ── Build dataset tabs ──
+  function buildTabs() {
+    const wrap = document.getElementById("dataset-tabs");
+    wrap.innerHTML = Object.entries(DATASETS).map(([key,d]) =>
+      `<button type="button" class="ds-tab${key===activeDataset?" active":""}" data-key="${key}">${d.label}</button>`
+    ).join("");
+    wrap.querySelectorAll(".ds-tab").forEach(b => b.addEventListener("click", ()=>switchDataset(b.dataset.key)));
+  }
+
+  // ── Travel sub-toggle ──
+  function initTravelSubview() {
+    const wrap = document.getElementById("travel-subview-wrap");
+    wrap.querySelectorAll(".tv-btn").forEach(b => b.addEventListener("click", () => {
+      DATASETS.visitors.travelView = b.dataset.view;
+      wrap.querySelectorAll(".tv-btn").forEach(x => x.classList.toggle("active", x===b));
+      document.getElementById("map-footer").textContent = ds().desc();
+      repaint();
+      refreshTooltips();
+    }));
+  }
+
+  // ── Highlight state on map (quiz result) ──
+  function highlightState(name) {
+    highlightedState = name;
+    repaint();
+    // Pan to state
+    const c = stateCenters[name];
+    if (c && c.mapKey === "main") mainMap.flyTo(c.center, 5, {duration:1.2});
+  }
+
+  function clearHighlight() {
+    highlightedState = null;
+    repaint();
+  }
+
+  // ── Load GeoJSON ──
+  fetch("us-states.json")
+    .then(r => r.json())
+    .then(data => {
+      const isAK = f => f?.properties?.name==="Alaska"  || f?.id==="02";
+      const isHI = f => f?.properties?.name==="Hawaii"  || f?.id==="15";
+
+      const lower48 = { type:"FeatureCollection", features: data.features.filter(f=>!isAK(f)&&!isHI(f)) };
+      const alaska  = { type:"FeatureCollection", features: data.features.filter(isAK) };
+      const hawaii  = { type:"FeatureCollection", features: data.features.filter(isHI) };
+
+      const lowerLayer = L.geoJSON(lower48, {style:stateStyle, onEachFeature:attachInteractions}).addTo(mainMap);
+      cacheStateCenters(lowerLayer, "main");
+      addStateLabels(lowerLayer, mainMap);
+
+      const akLayer = L.geoJSON(alaska, {style:stateStyle, onEachFeature:attachInteractions}).addTo(akMap);
+      cacheStateCenters(akLayer, "ak");
+      addStateLabels(akLayer, akMap);
+      if (akLayer.getBounds().isValid()) akMap.fitBounds(akLayer.getBounds(), {padding:[8,8]});
+
+      const hiLayer = L.geoJSON(hawaii, {style:stateStyle, onEachFeature:attachInteractions}).addTo(hiMap);
+      cacheStateCenters(hiLayer, "hi");
+      addStateLabels(hiLayer, hiMap);
+      if (hiLayer.getBounds().isValid()) hiMap.fitBounds(hiLayer.getBounds(), {padding:[8,8]});
+
+      // Wait for flexbox to fully paint, then tell Leaflet the real container size
+      function fixMapSizes() {
+        mainMap.invalidateSize({ animate: false });
+        akMap.invalidateSize({ animate: false });
+        hiMap.invalidateSize({ animate: false });
+        mainMap.fitBounds(lowerLayer.getBounds(), { padding: [24, 24], animate: false });
+        mainMap.setMaxBounds([[15,-170],[72,-50]]);
+        if (akLayer.getBounds().isValid()) akMap.fitBounds(akLayer.getBounds(), { padding:[8,8], animate:false });
+        if (hiLayer.getBounds().isValid()) hiMap.fitBounds(hiLayer.getBounds(), { padding:[8,8], animate:false });
+      }
+      // Three-pass: rAF + 0ms + 300ms ensures flexbox, fonts, and layout all settle
+      requestAnimationFrame(() => { fixMapSizes(); setTimeout(fixMapSizes, 300); });
+
+      // Collect all layers
+      [lowerLayer, akLayer, hiLayer].forEach(gl =>
+        gl.eachLayer(l => { if (l.feature) allLayers.push({feature:l.feature, layer:l}); })
+      );
+
+      buildTabs();
+      initTravelSubview();
+      document.getElementById("map-footer").textContent = ds().desc();
+      setupAvatarControls();
+      restoreAvatarsFromStorage();
+    })
+    .catch(err => console.error("GeoJSON load error:", err));
+
+
+  // ══════════════════════════════════════════════════════════════════
+  // AVATAR SYSTEM (from partner)
+  // ══════════════════════════════════════════════════════════════════
+  const AVATAR_IMAGE_SRC_BY_KEY = {
+    default: "images/avatar.png",
+    wahine:  "images/Wahine.png"
+  };
+  const AVATAR_STORAGE_KEY = "state-avatar-history-v1";
+  const AVATAR_SLOT_SPACING = 18;
+  const avatarMarkers = [];
+  let avatarsVisible = true;
+
+  function getInitials(name) {
+    return String(name || "Traveler").trim().split(/\s+/).filter(Boolean)
+      .slice(0, 2).map(function(p) { return p[0].toUpperCase(); }).join("") || "T";
+  }
+
+  function getAvatarOffsetForState(stateName) {
+    const idx = avatarMarkers.filter(function(i) { return i.stateName === stateName; }).length;
+    if (idx === 0) return 0;
+    const step = Math.ceil(idx / 2);
+    const dir = idx % 2 === 1 ? -1 : 1;
+    return dir * step * AVATAR_SLOT_SPACING;
+  }
+
+  function saveAvatarsToStorage() {
+    try {
+      localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(
+        avatarMarkers.map(function(i) {
+          return { personName: i.personName, stateName: i.stateName, avatarKey: i.avatarKey || "default" };
+        })
+      ));
+    } catch(_) {}
+  }
+
+  function readAvatarsFromStorage() {
+    try {
+      const raw = localStorage.getItem(AVATAR_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(function(i) { return i && i.personName && i.stateName; })
+        .map(function(i) { return Object.assign({ avatarKey: "default" }, i); });
+    } catch(_) { return []; }
+  }
+
+  function setAvatarVisibility(visible) {
+    avatarsVisible = visible;
+    avatarMarkers.forEach(function(item) {
+      const m = getMapByKey(item.mapKey);
+      if (visible) { if (!m.hasLayer(item.marker)) item.marker.addTo(m); }
+      else if (m.hasLayer(item.marker)) m.removeLayer(item.marker);
+    });
+    const btn = document.getElementById("avatar-toggle-btn");
+    if (btn) btn.textContent = visible ? "Hide Avatars" : "Show Avatars";
+  }
+
+  function clearAllAvatars() {
+    avatarMarkers.forEach(function(item) {
+      const m = getMapByKey(item.mapKey);
+      if (m.hasLayer(item.marker)) m.removeLayer(item.marker);
+    });
+    avatarMarkers.length = 0;
+    try { localStorage.removeItem(AVATAR_STORAGE_KEY); } catch(_) {}
+  }
+
+  function setupAvatarControls() {
+    const toggleBtn = document.getElementById("avatar-toggle-btn");
+    const clearBtn  = document.getElementById("avatar-clear-btn");
+    if (toggleBtn) toggleBtn.addEventListener("click", function() { setAvatarVisibility(!avatarsVisible); });
+    if (clearBtn)  clearBtn.addEventListener("click", clearAllAvatars);
+  }
+
+  function renderStateAvatar(personName, stateName, options) {
+    options = options || {};
+    const target = stateCenters[stateName];
+    if (!target) return false;
+    const map = getMapByKey(target.mapKey);
+    const rawName = String(personName || "Traveler");
+    const initials = getInitials(personName);
+    const xOffset  = getAvatarOffsetForState(stateName);
+    const avatarKey = options.avatarKey === "wahine" ? "wahine" : "default";
+    const avatarSrc = AVATAR_IMAGE_SRC_BY_KEY[avatarKey] || AVATAR_IMAGE_SRC_BY_KEY.default;
+
+    const icon = L.divIcon({
+      className: "state-avatar-wrap",
+      html: '<div class="state-avatar-slot" style="transform:translateX(' + xOffset + 'px)" aria-hidden="true">'
+          + '<div class="state-avatar-person">'
+          + '<img class="state-avatar-image" src="' + avatarSrc + '" alt="Avatar" onerror="this.onerror=null;this.src=&quot;images/avatar.png&quot;;" />'
+          + '<div class="person-label">' + escHtml(initials) + '</div>'
+          + '</div></div>',
+      iconSize: [220, 86],
+      iconAnchor: [110, 78]
+    });
+
+    const marker = L.marker(target.center, { icon: icon, keyboard: false });
+    if (avatarsVisible) marker.addTo(map);
+    marker.bindTooltip(escHtml(rawName) + " matched with " + escHtml(stateName), {
+      direction: "top", offset: [0, -14], className: "state-tooltip"
+    });
+    avatarMarkers.push({ marker: marker, mapKey: target.mapKey, personName: rawName, stateName: stateName, avatarKey: avatarKey });
+    if (options.persist !== false) saveAvatarsToStorage();
+    return true;
+  }
+
+  function restoreAvatarsFromStorage() {
+    readAvatarsFromStorage().forEach(function(entry) {
+      renderStateAvatar(entry.personName, entry.stateName, { persist: false, avatarKey: entry.avatarKey });
+    });
+  }
+
+  window.renderStateAvatar = renderStateAvatar;
+  window.clearAllAvatars   = clearAllAvatars;
+  window.setAvatarVisibility = setAvatarVisibility;
+
+  window.addEventListener("resize", () => {
+    mainMap.invalidateSize();
+    akMap.invalidateSize();
+    hiMap.invalidateSize();
+  });
+
+
+  // ══════════════════════════════════════════════════════════════════
+  // PANEL MODE SWITCHER
+  // ══════════════════════════════════════════════════════════════════
+  (function() {
+    const tabStudy = document.getElementById("tab-study");
+    const tabMatch = document.getElementById("tab-match");
+    const viewStudy = document.getElementById("panel-study");
+    const viewMatch = document.getElementById("panel-match");
+
+    tabStudy.addEventListener("click", () => {
+      tabStudy.classList.add("active"); tabMatch.classList.remove("active");
+      viewStudy.style.display = ""; viewMatch.style.display = "none";
+      clearHighlight();
+    });
+    tabMatch.addEventListener("click", () => {
+      tabMatch.classList.add("active"); tabStudy.classList.remove("active");
+      viewMatch.style.display = ""; viewStudy.style.display = "none";
+    });
+  })();
+
+  // ══════════════════════════════════════════════════════════════════
+  // RESEARCH STUDY QUIZ
+  // ══════════════════════════════════════════════════════════════════
+  (function() {
+    const STUDY_QUESTIONS = {
+      visitors: {
+        context: "Use the Visitors tab. Toggle between 'By Volume' and 'YoY Growth' on the map.",
+        question: "Which region showed the strongest overseas visitor growth from 2023 to 2024?",
+        options: [
+          "The Mountain West (Montana, Wyoming, Colorado)",
+          "The Northeast corridor (New York, Massachusetts)",
+          "Sun Belt & tourist destinations (Nevada, Hawaii, South Carolina)",
+          "The Great Plains (Kansas, Nebraska, Iowa)"
+        ],
+        correct: "Sun Belt & tourist destinations (Nevada, Hawaii, South Carolina)"
+      },
+      population: {
+        context: "Use the Population tab on the map.",
+        question: "Which state had the largest population in 2022?",
+        options: ["California", "Texas", "Florida", "New York"],
+        correct: "California"
+      },
+      gender: {
+        context: "Use the Gender tab. Blue = higher male %, pink = higher female %.",
+        question: "Which pattern best describes gender distribution across U.S. states?",
+        options: [
+          "Female percentage is higher in most states",
+          "Gender distribution is roughly equal across most states",
+          "Male percentage is notably higher in most states",
+          "Coastal states are predominantly female"
+        ],
+        correct: "Gender distribution is roughly equal across most states"
+      },
+      race: {
+        context: "Use the Race tab. Darker green = higher diversity index.",
+        question: "Which region generally shows the highest racial diversity?",
+        options: [
+          "The Northeast (Maine, Vermont, New Hampshire)",
+          "The Mountain West (Montana, Wyoming, Idaho)",
+          "Coastal and Southern states (California, Texas, New York)",
+          "The Midwest (Iowa, Nebraska, South Dakota)"
+        ],
+        correct: "Coastal and Southern states (California, Texas, New York)"
+      },
+      economy: {
+        context: "Use the Economy tab. Each state is colored by its dominant industry by employment. Hover states to see the full sector breakdown.",
+        question: "Which industry is the dominant employer across the most U.S. states?",
+        options: [
+          "Health Care",
+          "Professional Services",
+          "Accommodation & Food",
+          "Admin & Waste Management"
+        ],
+        correct: "Accommodation & Food"
+      }
+    };
+
+    const DATASET_ORDER = ["visitors","population","gender","race","economy"];
+    const studyResponses = {};
+    let studyDataset = "visitors";
+    let questionStart = Date.now();
+
+    const bodyEl   = document.getElementById("study-body");
+    const footerEl = document.getElementById("study-footer");
+
+    function renderStudySwitcher() {
+      const sw = document.createElement("div");
+      sw.className = "study-switcher";
+      sw.innerHTML = DATASET_ORDER.map(k =>
+        `<button type="button" class="study-tab${k===studyDataset?" active":""}" data-key="${k}">${DATASETS[k].label}</button>`
+      ).join("");
+      sw.querySelectorAll(".study-tab").forEach(b => b.addEventListener("click", () => {
+        studyDataset = b.dataset.key;
+        // also switch the map dataset
+        switchDataset(studyDataset);
+        renderStudyPanel();
+      }));
+      return sw;
+    }
+
+    function renderStudyPanel() {
+      bodyEl.innerHTML = "";
+      bodyEl.appendChild(renderStudySwitcher());
+
+      const q = STUDY_QUESTIONS[studyDataset];
+      const done = studyResponses[studyDataset];
+      questionStart = Date.now();
+
+      const wrap = document.createElement("div");
+      wrap.className = "sq-wrap";
+
+      if (done) {
+        const ok = done.answer === q.correct;
+        wrap.innerHTML = `
+          <div class="sq-context">${q.context}</div>
+          <div class="sq-question">${q.question}</div>
+          <div class="sq-opts-answered">
+            ${q.options.map(o => {
+              let cls = "sq-opt-result";
+              if (o === q.correct) cls += " correct";
+              else if (o === done.answer && !ok) cls += " wrong";
+              return `<div class="${cls}">${o}</div>`;
+            }).join("")}
+          </div>
+          <div class="sq-feedback ${ok?"sq-ok":"sq-wrong"}">
+            ${ok ? "✓ Correct" : "✗ Incorrect — "+q.correct}
+            <span class="sq-meta">Confidence: ${done.confidence}/5 · ${(done.timeMs/1000).toFixed(1)}s</span>
+          </div>
+          ${allDone() ? `<button type="button" class="sq-summary-btn" id="sq-summary-btn">View Summary</button>` : ""}
+        `;
+        footerEl.innerHTML = "";
+        if (allDone()) {
+          document.getElementById("sq-summary-btn")?.addEventListener("click", renderSummary);
         }
-      });
-      avatarMarkers.length = 0;
-      try {
-        localStorage.removeItem(AVATAR_STORAGE_KEY);
-      } catch (_) {}
-    }
+      } else {
+        let selected = null, confidence = null;
 
-    function setAvatarVisibility(visible) {
-      avatarsVisible = visible;
-      avatarMarkers.forEach((item) => {
-        const map = getMapByKey(item.mapKey);
-        if (visible) {
-          if (!map.hasLayer(item.marker)) {
-            item.marker.addTo(map);
-          }
-        } else if (map.hasLayer(item.marker)) {
-          map.removeLayer(item.marker);
-        }
-      });
-      updateAvatarButtons();
-    }
-
-    function setupAvatarControls() {
-      const toggleBtn = document.getElementById("avatar-toggle-btn");
-      const clearBtn = document.getElementById("avatar-clear-btn");
-      if (!toggleBtn || !clearBtn) return;
-
-      toggleBtn.addEventListener("click", () => {
-        setAvatarVisibility(!avatarsVisible);
-      });
-
-      clearBtn.addEventListener("click", () => {
-        clearAllAvatars();
-      });
-
-      updateAvatarButtons();
-    }
-
-    function renderStateAvatar(personName, stateName, options = {}) {
-      const target = stateCenters[stateName];
-      if (!target) return false;
-
-      const map = getMapByKey(target.mapKey);
-      const rawName = String(personName || "Traveler");
-      const safeName = escapeHtml(rawName);
-      const initials = getInitials(personName);
-      const xOffset = getAvatarOffsetForState(stateName);
-      const avatarKey = options.avatarKey === "wahine" ? "wahine" : "default";
-      const avatarSrc = AVATAR_IMAGE_SRC_BY_KEY[avatarKey] || AVATAR_IMAGE_SRC_BY_KEY.default;
-
-      const icon = L.divIcon({
-        className: "state-avatar-wrap",
-        html: `
-          <div class="state-avatar-slot" style="transform: translateX(${xOffset}px);" aria-hidden="true">
-            <div class="state-avatar-person">
-              <img class="state-avatar-image" src="${avatarSrc}" alt="Avatar" onerror="this.onerror=null;this.src='images/avatar.png';" />
-              <div class="person-label">${escapeHtml(initials)}</div>
+        wrap.innerHTML = `
+          <div class="sq-context">${q.context}</div>
+          <div class="sq-question">${q.question}</div>
+          <div class="sq-opts" id="sq-opts">
+            ${q.options.map(o => `<button type="button" class="sq-opt-btn" data-val="${o}">${o}</button>`).join("")}
+          </div>
+          <div class="sq-conf-wrap" id="sq-conf-wrap" style="display:none">
+            <div class="sq-conf-label">Confidence</div>
+            <div class="sq-conf-row">
+              <span class="sq-conf-note">Low</span>
+              ${[1,2,3,4,5].map(n=>`<button type="button" class="sq-conf-btn" data-n="${n}">${n}</button>`).join("")}
+              <span class="sq-conf-note">High</span>
             </div>
           </div>
-        `,
-        iconSize: [220, 86],
-        iconAnchor: [110, 78]
-      });
+        `;
 
-      const marker = L.marker(target.center, { icon, keyboard: false });
-      if (avatarsVisible) {
-        marker.addTo(map);
-      }
-      marker.bindTooltip(`${safeName} matched with ${escapeHtml(stateName)}`, {
-        direction: "top",
-        offset: [0, -14],
-        className: "state-tooltip"
-      });
-      avatarMarkers.push({ marker, mapKey: target.mapKey, personName: rawName, stateName, avatarKey });
-      if (options.persist !== false) {
-        saveAvatarsToStorage();
-      }
-      return true;
-    }
+        footerEl.innerHTML = `<button type="button" class="sq-submit" id="sq-submit" disabled>Submit</button>`;
 
-    function restoreAvatarsFromStorage() {
-      const saved = readAvatarsFromStorage();
-      saved.forEach((entry) => {
-        renderStateAvatar(entry.personName, entry.stateName, { persist: false, avatarKey: entry.avatarKey });
-      });
-    }
+        wrap.querySelectorAll(".sq-opt-btn").forEach(b => b.addEventListener("click", () => {
+          wrap.querySelectorAll(".sq-opt-btn").forEach(x=>x.classList.remove("selected"));
+          b.classList.add("selected");
+          selected = b.dataset.val;
+          document.getElementById("sq-conf-wrap").style.display = "";
+          checkReady();
+        }));
 
-    window.renderStateAvatar = renderStateAvatar;
-    window.clearAllAvatars = clearAllAvatars;
-    window.setAvatarVisibility = setAvatarVisibility;
+        wrap.querySelectorAll(".sq-conf-btn").forEach(b => b.addEventListener("click", () => {
+          wrap.querySelectorAll(".sq-conf-btn").forEach(x=>x.classList.remove("selected"));
+          b.classList.add("selected");
+          confidence = +b.dataset.n;
+          checkReady();
+        }));
 
-    // ---- Create 3 maps: main + 2 insets ----
-    const mainMap = L.map("map", {
-      zoomControl: false,
-      attributionControl: false,
-      preferCanvas: true,
-      dragging: true,
-      scrollWheelZoom: true
-    });
-
-    const akMap = L.map("map-ak", {
-      zoomControl: false,
-      attributionControl: false,
-      preferCanvas: true,
-      dragging: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      boxZoom: false,
-      keyboard: false,
-      tap: false
-    });
-
-    const hiMap = L.map("map-hi", {
-      zoomControl: false,
-      attributionControl: false,
-      preferCanvas: true,
-      dragging: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      boxZoom: false,
-      keyboard: false,
-      tap: false
-    });
-
-    // Optional: stop clicks on inset from panning main map (extra safe)
-    L.DomEvent.disableClickPropagation(document.getElementById("map-ak"));
-    L.DomEvent.disableClickPropagation(document.getElementById("map-hi"));
-    setupAvatarControls();
-
-    // ---- Load GeoJSON once, split into layers ----
-    fetch("us-states.json") // <-- your file name
-      .then(r => r.json())
-      .then(data => {
-
-        const isAK = f => (f?.properties?.name === "Alaska" || f?.id === "02");
-        const isHI = f => (f?.properties?.name === "Hawaii" || f?.id === "15");
-        // Lower 48 = everything except Alaska & Hawaii (keep DC if you want)
-        const lower48 = {
-          type: "FeatureCollection",
-          features: data.features.filter(f => !isAK(f) && !isHI(f))
-        };
-
-        const alaska = {
-          type: "FeatureCollection",
-          features: data.features.filter(isAK)
-        };
-
-        const hawaii = {
-          type: "FeatureCollection",
-          features: data.features.filter(isHI)
-        };
-
-        // --- Main layer (lower 48) ---
-        const lowerLayer = L.geoJSON(lower48, {
-          style: baseStyle,
-          onEachFeature: attachInteractions
-        }).addTo(mainMap);
-        cacheStateCenters(lowerLayer, "main");
-        addStateLabels(lowerLayer, mainMap);
-
-        mainMap.fitBounds(lowerLayer.getBounds(), { padding: [40, 40] });
-        addLegend(mainMap);
-        addSummaryPill(mainMap, data);
-
-        // --- Alaska inset ---
-        const akLayer = L.geoJSON(alaska, {
-          style: baseStyle,
-          onEachFeature: attachInteractions
-        }).addTo(akMap);
-        cacheStateCenters(akLayer, "ak");
-        addStateLabels(akLayer, akMap);
-
-        if (akLayer.getBounds().isValid()) {
-          akMap.fitBounds(akLayer.getBounds(), { padding: [10, 10] });
+        function checkReady() {
+          document.getElementById("sq-submit").disabled = !(selected && confidence);
         }
 
-        // --- Hawaii inset ---
-        const hiLayer = L.geoJSON(hawaii, {
-          style: baseStyle,
-          onEachFeature: attachInteractions
-        }).addTo(hiMap);
-        cacheStateCenters(hiLayer, "hi");
-        addStateLabels(hiLayer, hiMap);
+        document.getElementById("sq-submit")?.addEventListener("click", () => {
+          if (!selected || !confidence) return;
+          studyResponses[studyDataset] = { answer: selected, confidence, timeMs: Date.now()-questionStart };
+          // Auto-advance to next unanswered tab
+          const next = DATASET_ORDER.find(k => !studyResponses[k]);
+          if (next) { studyDataset = next; switchDataset(next); }
+          renderStudyPanel();
+        });
+      }
 
-        if (hiLayer.getBounds().isValid()) {
-          hiMap.fitBounds(hiLayer.getBounds(), { padding: [10, 10] });
+      bodyEl.appendChild(wrap);
+    }
+
+    function allDone() {
+      return DATASET_ORDER.every(k => studyResponses[k]);
+    }
+
+    function renderSummary() {
+      const total = DATASET_ORDER.length;
+      const correct = DATASET_ORDER.filter(k => studyResponses[k]?.answer === STUDY_QUESTIONS[k].correct).length;
+      const avgConf = (DATASET_ORDER.reduce((s,k)=>s+(studyResponses[k]?.confidence||0),0)/total).toFixed(1);
+      const avgTime = (DATASET_ORDER.reduce((s,k)=>s+(studyResponses[k]?.timeMs||0),0)/total/1000).toFixed(1);
+
+      bodyEl.innerHTML = `
+        <div class="sq-summary">
+          <div class="sq-sum-title">Study Complete</div>
+          <div class="sq-sum-score">${correct}<span>/${total}</span></div>
+          <div class="sq-sum-meta">Avg confidence: ${avgConf}/5 · Avg time: ${avgTime}s</div>
+          <table class="sq-sum-table">
+            <thead><tr><th>Dataset</th><th>Result</th><th>Conf.</th><th>Time</th></tr></thead>
+            <tbody>
+              ${DATASET_ORDER.map(k => {
+                const r = studyResponses[k], ok = r.answer === STUDY_QUESTIONS[k].correct;
+                return `<tr>
+                  <td>${DATASETS[k].label}</td>
+                  <td class="${ok?"sum-ok":"sum-bad"}">${ok?"✓":"✗"}</td>
+                  <td>${r.confidence}/5</td>
+                  <td>${(r.timeMs/1000).toFixed(1)}s</td>
+                </tr>`;
+              }).join("")}
+            </tbody>
+          </table>
+          <p class="sq-sum-note">Thank you. This study examines whether interactive maps aid geographic data comprehension.</p>
+        </div>`;
+
+      footerEl.innerHTML = `<button type="button" class="sq-submit" id="sq-retake">Retake Study</button>`;
+      document.getElementById("sq-retake")?.addEventListener("click", () => {
+        DATASET_ORDER.forEach(k => delete studyResponses[k]);
+        studyDataset = "visitors";
+        switchDataset("visitors");
+        renderStudyPanel();
+      });
+    }
+
+    // Init — switch map to match first study tab
+    switchDataset(studyDataset);
+    renderStudyPanel();
+  })();
+
+  // ══════════════════════════════════════════════════════════════════
+  // FIND YOUR STATE MATCH — recommender quiz
+  // ══════════════════════════════════════════════════════════════════
+  (function() {
+    const STATES = [
+      "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia",
+      "Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland",
+      "Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey",
+      "New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina",
+      "South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"
+    ];
+
+    const GROUPS = {
+      warm:         new Set(["Florida","Texas","Arizona","Nevada","California","Hawaii","Georgia","South Carolina","Louisiana","Alabama","Mississippi","New Mexico"]),
+      mild:         new Set(["North Carolina","Virginia","Tennessee","Arkansas","Oklahoma","Kentucky","Maryland","Oregon"]),
+      cold:         new Set(["Alaska","North Dakota","South Dakota","Montana","Minnesota","Wisconsin","Vermont","Maine","New Hampshire","Wyoming","Michigan"]),
+      urban:        new Set(["New York","California","Illinois","Massachusetts","Texas","Florida","New Jersey","Washington","Georgia","Pennsylvania"]),
+      suburban:     new Set(["Virginia","North Carolina","Colorado","Arizona","Maryland","Tennessee","Ohio","Minnesota"]),
+      rural:        new Set(["Montana","Wyoming","North Dakota","South Dakota","Idaho","West Virginia","Vermont","Maine","Nebraska"]),
+      affordable:   new Set(["Texas","Tennessee","Oklahoma","Arkansas","Mississippi","Alabama","Kentucky","West Virginia","Iowa","Kansas"]),
+      balancedCost: new Set(["North Carolina","Georgia","Arizona","Ohio","Michigan","Nevada","Missouri","Indiana","Pennsylvania"]),
+      premium:      new Set(["California","New York","Massachusetts","Hawaii","Washington","New Jersey","Maryland","Colorado","Oregon"]),
+      nature:       new Set(["Colorado","Utah","Montana","Wyoming","Idaho","Alaska","Maine","Vermont","Oregon","Washington"]),
+      entertainment:new Set(["California","New York","Nevada","Florida","Texas","Illinois","Georgia","Louisiana"]),
+      jobs:         new Set(["California","Texas","New York","Washington","Massachusetts","Virginia","North Carolina","Colorado","Georgia"]),
+      quiet:        new Set(["Vermont","Maine","Wyoming","Montana","West Virginia","South Dakota","North Dakota","Idaho","New Hampshire"])
+    };
+
+    const QUESTION_BANK = [
+      { id:"weather", prompt:"What weather do you prefer most of the year?", options:[
+        {id:"warm",  label:"Warm and sunny",  apply:[{group:"warm",score:3},{group:"mild",score:1}]},
+        {id:"mild",  label:"Four seasons",    apply:[{group:"mild",score:3},{group:"cold",score:1},{group:"warm",score:1}]},
+        {id:"cold",  label:"Cool / snowy",    apply:[{group:"cold",score:3},{group:"nature",score:1}]}
+      ]},
+      { id:"lifestyle", prompt:"What kind of lifestyle fits you best?", options:[
+        {id:"urban",    label:"Big city energy",      apply:[{group:"urban",score:3},{group:"jobs",score:1}]},
+        {id:"suburban", label:"Balanced suburban",    apply:[{group:"suburban",score:3},{group:"balancedCost",score:1}]},
+        {id:"rural",    label:"Small town / rural",   apply:[{group:"rural",score:3},{group:"quiet",score:1}]}
+      ]},
+      { id:"budget", prompt:"How important is affordability?", options:[
+        {id:"high",   label:"Very important",      apply:[{group:"affordable",score:3},{group:"balancedCost",score:1}]},
+        {id:"medium", label:"Somewhat important",  apply:[{group:"balancedCost",score:3},{group:"affordable",score:1}]},
+        {id:"low",    label:"Not a major factor",  apply:[{group:"premium",score:3},{group:"urban",score:1}]}
+      ]},
+      { id:"activities", prompt:"Which activities do you want nearby?", options:[
+        {id:"nature",        label:"Outdoors and nature",      apply:[{group:"nature",score:3},{group:"quiet",score:1}]},
+        {id:"entertainment", label:"Food, arts, nightlife",   apply:[{group:"entertainment",score:3},{group:"urban",score:1}]},
+        {id:"mix",           label:"A mix of both",            apply:[{group:"suburban",score:2},{group:"nature",score:1},{group:"entertainment",score:1}]}
+      ]},
+      { id:"priority", prompt:"What is your top priority in your next place?", options:[
+        {id:"career",  label:"Career opportunities",  apply:[{group:"jobs",score:3},{group:"urban",score:1}]},
+        {id:"quiet",   label:"Peace and slower pace", apply:[{group:"quiet",score:3},{group:"rural",score:1}]},
+        {id:"balance", label:"Balanced life",         apply:[{group:"suburban",score:2},{group:"balancedCost",score:2}]}
+      ]},
+      { id:"weekend", prompt:"What does your ideal weekend look like?", options:[
+        {id:"events", label:"Concerts, events, city life", apply:[{group:"entertainment",score:3},{group:"urban",score:1}]},
+        {id:"hiking", label:"Trails, parks, mountains",   apply:[{group:"nature",score:3},{group:"quiet",score:1}]},
+        {id:"mix",    label:"Some activity, some rest",   apply:[{group:"suburban",score:2},{group:"nature",score:1},{group:"entertainment",score:1}]}
+      ]},
+      { id:"homeType", prompt:"Where would you rather live?", options:[
+        {id:"downtown",   label:"Downtown apartment",     apply:[{group:"urban",score:3},{group:"premium",score:1}]},
+        {id:"suburb",     label:"Suburban neighborhood",  apply:[{group:"suburban",score:3},{group:"balancedCost",score:1}]},
+        {id:"smalltown",  label:"Small town",             apply:[{group:"rural",score:3},{group:"quiet",score:1}]}
+      ]},
+      { id:"transport", prompt:"How do you prefer getting around?", options:[
+        {id:"transit",  label:"Public transit / walking", apply:[{group:"urban",score:3},{group:"premium",score:1}]},
+        {id:"car",      label:"Mostly by car",            apply:[{group:"suburban",score:3},{group:"balancedCost",score:1}]},
+        {id:"minimal",  label:"Short drives, less traffic", apply:[{group:"quiet",score:3},{group:"rural",score:1}]}
+      ]},
+      { id:"pace", prompt:"What daily pace do you enjoy?", options:[
+        {id:"fast",     label:"Fast-paced and busy",    apply:[{group:"urban",score:3},{group:"jobs",score:1}]},
+        {id:"moderate", label:"Balanced and steady",    apply:[{group:"suburban",score:3},{group:"balancedCost",score:1}]},
+        {id:"slow",     label:"Slow and relaxed",       apply:[{group:"quiet",score:3},{group:"rural",score:1}]}
+      ]},
+      { id:"landscape", prompt:"Which landscape do you prefer most?", options:[
+        {id:"coast",    label:"Coast and beaches",       apply:[{group:"warm",score:2},{group:"premium",score:1},{group:"entertainment",score:1}]},
+        {id:"mountain", label:"Mountains and forests",   apply:[{group:"nature",score:3},{group:"quiet",score:1}]},
+        {id:"plains",   label:"Open plains and space",   apply:[{group:"rural",score:2},{group:"affordable",score:2}]}
+      ]}
+    ];
+
+    function shuffle(arr) {
+      const out = arr.slice();
+      for (let i=out.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [out[i],out[j]]=[out[j],out[i]]; }
+      return out;
+    }
+
+    function getBaseScore(state) {
+      const d = visitData()[state];
+      return d && typeof d.visitation2024k==="number" ? Math.min(8, d.visitation2024k/1200) : 0;
+    }
+
+    function computeRecs(answers, questions) {
+      const scores = new Map(STATES.map(s=>[s, getBaseScore(s)]));
+      answers.forEach((aid, idx) => {
+        const q = questions[idx]; if (!q) return;
+        const sel = q.options.find(o=>o.id===aid); if (!sel) return;
+        sel.apply.forEach(({group,score}) => {
+          (GROUPS[group]||new Set()).forEach(s => scores.set(s,(scores.get(s)||0)+score));
+        });
+      });
+      return [...scores.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3).map(([state,score])=>({state,score:+score.toFixed(2)}));
+    }
+
+    // ── Quiz rendering ──
+    const body    = document.getElementById("quiz-body");
+    const backBtn = document.getElementById("quiz-back-btn");
+    const nextBtn = document.getElementById("quiz-next-btn");
+
+    let questions = shuffle(QUESTION_BANK).slice(0,5);
+    let playerName = "";
+    const answers = [];
+    let step = -1;
+
+    function showStep() {
+      if (step < 0) {
+        // Intro
+        body.innerHTML = `
+          <div class="qz-step-label">Welcome</div>
+          <h2 class="qz-heading">Find your perfect state match</h2>
+          <p class="qz-sub">Answer 5 quick questions and we'll match you to a U.S. state — then explore it on the map.</p>
+          <div class="qz-field">
+            <label class="qz-label" for="quiz-name-input">Your name</label>
+            <input id="quiz-name-input" class="qz-input" type="text" maxlength="40" placeholder="Enter your name" value="${escHtml(playerName)}" autocomplete="off" />
+          </div>`;
+        const inp = body.querySelector("#quiz-name-input");
+        inp?.focus();
+        inp?.addEventListener("input", e => { playerName = e.target.value.trim(); nextBtn.disabled = !playerName; });
+        backBtn.style.display = "none";
+        nextBtn.textContent = "Begin";
+        nextBtn.disabled = !playerName;
+        clearHighlight();
+      } else if (step < questions.length) {
+        const q = questions[step];
+        body.innerHTML = `
+          <div class="qz-step-label">Question ${step+1} of ${questions.length}</div>
+          <h2 class="qz-heading">${escHtml(q.prompt)}</h2>
+          <div class="qz-options">
+            ${q.options.map(o=>`
+              <button type="button" class="qz-opt${answers[step]===o.id?" selected":""}" data-ans="${o.id}">
+                ${escHtml(o.label)}
+              </button>`).join("")}
+          </div>`;
+        body.querySelectorAll(".qz-opt").forEach(b => b.addEventListener("click", () => {
+          answers[step] = b.dataset.ans;
+          body.querySelectorAll(".qz-opt").forEach(x=>x.classList.toggle("selected",x===b));
+          nextBtn.disabled = false;
+        }));
+        backBtn.style.display = "";
+        backBtn.disabled = step === 0;
+        nextBtn.textContent = step===questions.length-1 ? "See my match" : "Next";
+        nextBtn.disabled = !answers[step];
+      } else {
+        // Result
+        const recs = computeRecs(answers, questions);
+        const top = recs[0];
+        const vd = visitData()[top.state];
+        const demog = demogData()[top.state]?.["2022"];
+        const econ  = econData()[top.state];
+
+        // Build extra stats
+        const statFmt = v => v != null ? v.toLocaleString() : "—";
+        const pctFmt  = v => typeof v==="number" ? (v*100).toFixed(1)+"%" : "—";
+        const popFmt  = v => v >= 1e6 ? (v/1e6).toFixed(1)+"M" : v >= 1e3 ? (v/1e3).toFixed(0)+"K" : v?.toString() || "—";
+
+        body.innerHTML = `
+          <div class="qz-step-label">Your match</div>
+          <h2 class="qz-result-name">${escHtml(playerName)}, your state is</h2>
+          <div class="qz-result-state">${escHtml(top.state)}</div>
+          <div class="qz-stats-grid">
+            ${vd ? `<div class="qz-stat"><span class="qz-stat-val">#${vd.rank}</span><span class="qz-stat-lbl">Visitor rank</span></div>
+                    <div class="qz-stat"><span class="qz-stat-val">${statFmt(vd.visitation2024k)}k</span><span class="qz-stat-lbl">Overseas visitors '24</span></div>
+                    <div class="qz-stat"><span class="qz-stat-val">${pctFmt(vd.pctChange)}</span><span class="qz-stat-lbl">YoY visitor growth</span></div>` : ""}
+            ${demog ? `<div class="qz-stat"><span class="qz-stat-val">${popFmt(demog.population)}</span><span class="qz-stat-lbl">Population (2022)</span></div>` : ""}
+            ${econ  ? `<div class="qz-stat"><span class="qz-stat-val">${econ.dominantSector||"—"}</span><span class="qz-stat-lbl">Top industry</span></div>` : ""}
+          </div>
+          <div class="qz-top3-label">Also consider</div>
+          <div class="qz-top3">
+            ${recs.slice(1).map(r=>`<span class="qz-runner">${escHtml(r.state)}</span>`).join("")}
+          </div>`;
+
+        backBtn.style.display = "";
+        backBtn.disabled = true;
+        nextBtn.textContent = "Play again";
+        nextBtn.disabled = false;
+
+        // Highlight on map
+        highlightState(top.state);
+        // Place avatar on matched state
+        if (playerName) renderStateAvatar(playerName, top.state);
+      }
+    }
+
+    backBtn.addEventListener("click", () => {
+      if (step > 0) { step--; showStep(); }
+      else if (step === 0) { step = -1; showStep(); }
+    });
+
+    nextBtn.addEventListener("click", () => {
+      if (step < 0) {
+        if (!playerName) return;
+        step = 0; showStep(); return;
+      }
+      if (step < questions.length) {
+        if (!answers[step]) return;
+        step++; showStep(); return;
+      }
+      // Play again
+      questions = shuffle(QUESTION_BANK).slice(0,5);
+      playerName = ""; answers.length = 0; step = -1;
+      showStep();
+    });
+
+    showStep();
+  })();
+
+  // ══════════════════════════════════════════════════════════════════
+  // CHARTS VIEW — Chart.js visualizations (from partner)
+  // ══════════════════════════════════════════════════════════════════
+  (function() {
+    const btnCharts = document.getElementById("btn-charts-view");
+    const chartsView = document.getElementById("charts-view");
+    const mainArea = document.querySelector(".main-area");
+    let chartsBuilt = false;
+    let isChartsView = false;
+
+    function buildCharts() {
+      const visitData = window.STATE_VISIT_DATA || {};
+      const entries = Object.entries(visitData)
+        .filter(function(e) { return typeof e[1].visitation2024k === "number"; })
+        .sort(function(a, b) { return b[1].visitation2024k - a[1].visitation2024k; });
+
+      const top15 = entries.slice(0, 15);
+      const top10 = entries.slice(0, 10);
+      const otherTotal = entries.slice(10).reduce(function(s, e) { return s + e[1].visitation2024k; }, 0);
+
+      const chartDefaults = {
+        color: "rgba(240,238,232,0.7)",
+        borderColor: "rgba(255,255,255,0.1)"
+      };
+
+      // Bar chart — top 15 by 2024 visitation
+      new Chart(document.getElementById("bar-chart"), {
+        type: "bar",
+        data: {
+          labels: top15.map(function(e) { return e[0]; }),
+          datasets: [{
+            label: "2024 Visitation (000s)",
+            data: top15.map(function(e) { return e[1].visitation2024k; }),
+            backgroundColor: top15.map(function(_, i) {
+              const t = i / (top15.length - 1);
+              const r = Math.round(110 + t * 100), g = Math.round(50 - t * 30), b = Math.round(12);
+              return "rgba(" + r + "," + g + "," + b + ",0.85)";
+            }),
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, indexAxis: "y",
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: chartDefaults.color }, grid: { color: chartDefaults.borderColor } },
+            y: { ticks: { color: chartDefaults.color, font: { size: 11 } }, grid: { display: false } }
+          }
         }
+      });
 
-        // ---- "Zoom it in" a bit like D3's framing ----
-        // After fitting, zoom in one level for a tighter look:
-        mainMap.setZoom(mainMap.getZoom() + .5);
-        restoreAvatarsFromStorage();
+      // Pie chart — top 10 share + other
+      const pieColors = ["#c33a1f","#e05a2a","#ef8354","#f4a261","#f8bf85",
+                         "#0369a1","#2563a8","#6d28d9","#047857","#be185d","#6b7280"];
+      new Chart(document.getElementById("pie-chart"), {
+        type: "doughnut",
+        data: {
+          labels: top10.map(function(e) { return e[0]; }).concat(["All others"]),
+          datasets: [{
+            data: top10.map(function(e) { return e[1].visitation2024k; }).concat([otherTotal]),
+            backgroundColor: pieColors,
+            borderWidth: 1,
+            borderColor: "#1a1a2e"
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "right", labels: { color: chartDefaults.color, font: { size: 11 }, padding: 10, boxWidth: 12 } }
+          }
+        }
+      });
 
-      })
-      .catch(err => console.error("Failed to load us-states.json:", err));
+      // Line chart — 2023 vs 2024 top 15
+      new Chart(document.getElementById("line-chart"), {
+        type: "bar",
+        data: {
+          labels: top15.map(function(e) { return e[0]; }),
+          datasets: [
+            {
+              label: "2023",
+              data: top15.map(function(e) { return e[1].visitation2023k || 0; }),
+              backgroundColor: "rgba(99,179,237,0.7)", borderRadius: 3
+            },
+            {
+              label: "2024",
+              data: top15.map(function(e) { return e[1].visitation2024k; }),
+              backgroundColor: "rgba(232,195,106,0.85)", borderRadius: 3
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: chartDefaults.color } } },
+          scales: {
+            x: { ticks: { color: chartDefaults.color, font: { size: 10 } }, grid: { color: chartDefaults.borderColor } },
+            y: { ticks: { color: chartDefaults.color }, grid: { color: chartDefaults.borderColor } }
+          }
+        }
+      });
+    }
+
+    btnCharts.addEventListener("click", function() {
+      isChartsView = !isChartsView;
+      if (isChartsView) {
+        chartsView.style.display = "";
+        mainArea.style.display = "none";
+        btnCharts.textContent = "Map View";
+        btnCharts.classList.add("active");
+        if (!chartsBuilt) { buildCharts(); chartsBuilt = true; }
+      } else {
+        chartsView.style.display = "none";
+        mainArea.style.display = "";
+        btnCharts.textContent = "Charts View";
+        btnCharts.classList.remove("active");
+      }
+    });
+  })();
+
   </script>
-  <script src="state-recommender-game.js"></script>
-  <script src="visualization-tabs.js"></script>
 </body>
 </html>
