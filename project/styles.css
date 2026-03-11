@@ -178,17 +178,24 @@ body {
 
 .map-footer {
   flex-shrink: 0;
-  padding: 6px 16px;
+  padding: 5px 12px;
   background: var(--panel-bg);
   border-top: 1px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+}
+
+.map-footer span {
   font-size: 11px;
   color: var(--ink-faint);
   font-style: italic;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  height: 30px;
-  line-height: 18px;
+  flex: 1;
 }
 
 /* ══════════════════════════════════════════
@@ -975,29 +982,23 @@ body {
 
 /* Avatar controls — fixed bottom-left of main area */
 .avatar-controls {
-  position: absolute;
-  left: 14px;
-  bottom: 38px;
-  z-index: 1200;
   display: flex;
-  gap: 8px;
-  width: 210px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .avatar-btn {
   border: 0;
-  border-radius: 8px;
-  flex: 1;
-  padding: 8px 10px;
-  font-size: 11px;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 10px;
   font-weight: 700;
   color: #ffffff;
-  background: rgba(99,102,241,0.75);
-  backdrop-filter: blur(6px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  background: rgba(99,102,241,0.7);
   cursor: pointer;
   transition: background 0.14s;
   font-family: var(--sans);
+  white-space: nowrap;
 }
 
 .avatar-btn:hover { background: rgba(99,102,241,0.95); }
